@@ -86,11 +86,11 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
     const currentYear = new Date().getFullYear().toString().slice(-2);
 
     const ticketGrid = (sheetIndex: number) => {
-        const gridClass = packSize === 24 ? "grid-cols-6" : "grid-cols-[repeat(19,minmax(0,1fr))]";
-        const numRows = packSize === 24 ? 4 : 2;
+        const columns = 7;
+        const rows = Math.ceil(packSize / columns);
         const startNumber = initialStartNumber + (sheetIndex * packSize);
         return (
-            <div className={`grid ${gridClass} grid-rows-${numRows}`}>
+            <div className={`grid grid-cols-7`} style={{gridTemplateRows: `repeat(${rows}, 1fr)`}}>
                 {Array.from({ length: packSize }).map((_, i) => (
                     <div key={i} className="aspect-square bg-white border-dashed border border-gray-400 flex">
                         <div className="relative flex-[3] flex items-center justify-center p-1 border-r border-dashed border-gray-400">
