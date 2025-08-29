@@ -92,7 +92,7 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
         return (
             <div className={`grid grid-cols-7`} style={{gridTemplateRows: `repeat(${rows}, 1fr)`}}>
                 {Array.from({ length: packSize }).map((_, i) => (
-                    <div key={i} className="aspect-square bg-white border-dashed border border-gray-400 flex">
+                    <div key={i} className="aspect-square bg-white border-dashed border border-gray-400 flex" style={{width: '5.5cm', height: '5.5cm'}}>
                         <div className="relative flex-[3] flex items-center justify-center p-1 border-r border-dashed border-gray-400">
                            <Image
                                 src={logoSrc}
@@ -103,8 +103,8 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
                                 data-ai-hint="logo placeholder"
                             />
                         </div>
-                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-0.5">
-                             <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 scale-50">
+                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-0.5 overflow-hidden">
+                             <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 scale-[0.3]">
                                 {level}-{currentYear}{String(startNumber + i + 1).padStart(3, '0')}
                             </p>
                         </div>
@@ -128,7 +128,7 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
                {Array.from({length: count}).map((_, i) => (
                     <div key={i} className="bg-muted p-4 rounded-lg">
                         <h3 className="font-semibold mb-2 text-center text-sm">Sheet {i+1} of {count}</h3>
-                         <div className="w-full bg-white p-2" style={{aspectRatio: '45 / 32'}}>
+                         <div className="w-full bg-white p-2 inline-block" style={{aspectRatio: '45 / 32'}}>
                             {ticketGrid(i)}
                         </div>
                     </div>
