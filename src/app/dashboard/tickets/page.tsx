@@ -49,7 +49,7 @@ const TicketPreview = ({
   return (
     <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
       <div
-        className="relative w-[250px] h-[250px] bg-card rounded-xl shadow-lg overflow-hidden flex"
+        className="relative w-[250px] h-[250px] bg-card shadow-lg overflow-hidden flex"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -162,10 +162,10 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                         key={opt}
                         htmlFor={`gen-opt-${opt}`}
                         className={cn(
-                            "flex items-center justify-center h-10 w-10 rounded-full border cursor-pointer transition-colors text-sm font-medium",
+                            "flex items-center justify-center h-10 w-10 rounded-full border-2 cursor-pointer transition-colors text-sm font-medium",
                             value === opt && !isCustom 
                                 ? "bg-primary text-primary-foreground border-primary" 
-                                : "bg-background hover:bg-accent hover:text-accent-foreground"
+                                : "bg-background hover:bg-accent hover:text-accent-foreground border-input"
                         )}
                     >
                         {opt}
@@ -182,8 +182,8 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                         if(!isCustom) onChange(5)
                     }}
                     className={cn(
-                        "w-24 h-10 text-center",
-                        isCustom ? "border-primary ring-2 ring-primary-focus" : ""
+                        "w-24 h-10 text-center rounded-full border-2",
+                        isCustom ? "border-primary ring-2 ring-primary/50" : "border-input"
                     )}
                  />
             </RadioGroup>
@@ -293,5 +293,3 @@ export default function TicketsPage() {
     </div>
   );
 }
-
-    
