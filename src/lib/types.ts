@@ -1,5 +1,5 @@
-export type Level = "P" | "C" | "L" | "S" | "Se";
-export const levels: Level[] = ["P", "C", "L", "S", "Se"];
+export type Level = "P" | "C" | "L" | "S" | "E";
+export const levels: Level[] = ["P", "C", "L", "S", "E"];
 
 export type PackSize = 24 | 36;
 export const packSizes: PackSize[] = [24, 36];

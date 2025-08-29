@@ -72,7 +72,7 @@ const TicketPreview = ({
 
         {/* Right part */}
         <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-2">
-          <p className="text-2xl font-bold tracking-widest [writing-mode:vertical-rl] text-orientation-mixed rotate-180">
+          <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] text-orientation-mixed rotate-180">
             {level}-{currentYear}XXX
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function TicketsPage() {
                         C: "Collège",
                         L: "Lycée",
                         S: "Supérieur",
-                        Se: "Spéciale",
+                        E: "Spéciale",
                       }[l]
                     }
                   </SelectItem>
