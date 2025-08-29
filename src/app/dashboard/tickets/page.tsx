@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Level, PackSize, levels, packSizes } from "@/lib/types";
-import { Edit, Sparkles, Upload } from "lucide-react";
+import { Edit, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { CardDescription as DialogCardDescription } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from "@/lib/utils";
+
 
 const TicketPreview = ({
   level,
@@ -49,7 +53,6 @@ const TicketPreview = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Left part */}
         <div className="relative flex-[3] flex items-center justify-center p-4">
           <Image
             src={logoSrc}
@@ -69,10 +72,8 @@ const TicketPreview = ({
             </Button>
           )}
         </div>
-
-        {/* Right part */}
         <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-2">
-          <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] text-orientation-mixed rotate-180">
+          <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180">
             {level}-{currentYear}XXX
           </p>
         </div>
@@ -81,23 +82,36 @@ const TicketPreview = ({
   );
 };
 
-const SheetPreview = ({ level, packSize, count }: { level: Level, packSize: PackSize, count: number }) => {
+const SheetPreview = ({ level, packSize, count, logoSrc }: { level: Level, packSize: PackSize, count: number, logoSrc: string }) => {
     const currentYear = new Date().getFullYear().toString().slice(-2);
 
-    const ticketGrid = useMemo(() => {
+    const ticketGrid = (sheetIndex: number) => {
         const gridClass = packSize === 36 ? "grid-cols-9" : "grid-cols-6";
+        const startNumber = sheetIndex * packSize;
         return (
-            <div className={`grid ${gridClass} gap-1`}>
+            <div className={`grid ${gridClass}`}>
                 {Array.from({ length: packSize }).map((_, i) => (
-                    <div key={i} className="aspect-square bg-white border rounded-sm flex flex-col items-center justify-center text-[6px] p-0.5">
-                        <div className="font-bold text-center">{level}-{currentYear}00{i+1}</div>
-                        <Sparkles className="h-2 w-2 text-primary/50 mt-0.5"/>
+                    <div key={i} className="aspect-[4/3] bg-white border-dashed border border-gray-400 flex">
+                        <div className="relative flex-[3] flex items-center justify-center p-1 border-r border-dashed border-gray-400">
+                           <Image
+                                src={logoSrc}
+                                alt="Logo"
+                                width={40}
+                                height={40}
+                                className="rounded-full opacity-50"
+                                data-ai-hint="logo placeholder"
+                            />
+                        </div>
+                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono text-[8px] p-0.5">
+                             <p className="font-bold tracking-wider [writing-mode:vertical-rl] rotate-180">
+                                {level}-{currentYear}{String(startNumber + i + 1).padStart(3, '0')}
+                            </p>
+                        </div>
                     </div>
                 ))}
             </div>
         )
-
-    }, [packSize, level, currentYear]);
+    };
 
     if(count === 0) return null;
 
@@ -105,24 +119,77 @@ const SheetPreview = ({ level, packSize, count }: { level: Level, packSize: Pack
         <DialogContent className="max-w-4xl">
             <DialogHeader>
                 <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
-                <CardDescription>
+                <DialogCardDescription>
                     Generated {count} sheet{count > 1 ? 's' : ''} for Level {level} with {packSize} tickets each.
-                </CardDescription>
+                </DialogCardDescription>
             </DialogHeader>
             <div className="max-h-[70vh] overflow-y-auto p-1 space-y-4">
                {Array.from({length: count}).map((_, i) => (
                     <div key={i} className="bg-muted p-4 rounded-lg">
                         <h3 className="font-semibold mb-2 text-center text-sm">Sheet {i+1} of {count}</h3>
                          <div className="aspect-[3/2] w-full bg-slate-200 p-2 rounded">
-                            {ticketGrid}
+                            {ticketGrid(i)}
                         </div>
                     </div>
                ))}
             </div>
         </DialogContent>
     )
-
 }
+
+const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (value: number) => void }) => {
+    const options = [1, 2, 3, 4];
+    const isCustom = !options.includes(value);
+
+    return (
+        <div className="space-y-4">
+            <RadioGroup 
+                value={isCustom ? "custom" : String(value)} 
+                onValueChange={(val) => {
+                    if (val !== 'custom') {
+                        onChange(Number(val));
+                    }
+                }} 
+                className="flex items-center gap-2"
+            >
+                {options.map(opt => (
+                     <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="hidden"/>
+                     
+                ))}
+                 <RadioGroupItem value="custom" id="gen-opt-custom" className="hidden"/>
+
+                {options.map(opt => (
+                    <Label
+                        key={opt}
+                        htmlFor={`gen-opt-${opt}`}
+                        className={cn(
+                            "flex items-center justify-center h-10 w-10 rounded-full border cursor-pointer transition-colors",
+                            value === opt && !isCustom ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                        )}
+                    >
+                        {opt}
+                    </Label>
+                ))}
+                
+                <Input
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 10"
+                    value={isCustom ? value : ''}
+                    onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
+                    onFocus={() => {
+                        if(!isCustom) onChange(5)
+                    }}
+                    className={cn(
+                        "w-24 h-10 text-center",
+                        isCustom ? "border-primary ring-2 ring-primary" : ""
+                    )}
+                 />
+            </RadioGroup>
+        </div>
+    )
+}
+
 
 export default function TicketsPage() {
   const [level, setLevel] = useState<Level>("P");
@@ -190,14 +257,8 @@ export default function TicketsPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="generations">Number of Sheets</Label>
-            <Input
-              id="generations"
-              type="number"
-              min="1"
-              value={generations}
-              onChange={(e) => setGenerations(Math.max(1, Number(e.target.value)))}
-            />
+            <Label>Number of Sheets</Label>
+            <GenerationsSelector value={generations} onChange={setGenerations} />
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
@@ -205,7 +266,7 @@ export default function TicketsPage() {
               <DialogTrigger asChild>
                 <Button variant="outline" disabled={generatedCount === 0}>View Sheets</Button>
               </DialogTrigger>
-              <SheetPreview level={level} packSize={packSize} count={generatedCount} />
+              <SheetPreview level={level} packSize={packSize} count={generatedCount} logoSrc={logo} />
             </Dialog>
           <Button onClick={handleGenerate}>
             <Sparkles className="mr-2 h-4 w-4" />
@@ -227,3 +288,5 @@ export default function TicketsPage() {
     </div>
   );
 }
+
+    
