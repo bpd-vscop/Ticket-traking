@@ -37,7 +37,7 @@ const generateTicketsForFamily = (family: Family): Ticket[] => {
     const currentYear = new Date().getFullYear().toString().slice(-2);
     family.sheetIds.forEach(sheetId => {
         // This is a mock. In reality, we'd fetch sheet details.
-        const packSize = sheetId.includes('2') ? 24 : 36;
+        const packSize = sheetId.includes('2') ? 24 : 38;
         for (let i = 1; i <= packSize; i++) {
             tickets.push({
                 id: `${family.level}-${currentYear}${String(i).padStart(3, '0')}`,

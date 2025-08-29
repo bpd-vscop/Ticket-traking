@@ -14,9 +14,9 @@ export const mockTeachers: Teacher[] = [
 
 export const mockSheets: Sheet[] = [
   { id: 'sheet-1', level: 'P', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: false, downloads: 2, generationDate: new Date('2024-07-20T10:00:00Z') },
-  { id: 'sheet-2', level: 'P', packSize: 36, startNumber: 25, endNumber: 60, isAssigned: false, downloads: 0, generationDate: new Date('2024-07-21T11:00:00Z') },
+  { id: 'sheet-2', level: 'P', packSize: 38, startNumber: 25, endNumber: 62, isAssigned: false, downloads: 0, generationDate: new Date('2024-07-21T11:00:00Z') },
   { id: 'sheet-3', level: 'C', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: false, downloads: 1, generationDate: new Date('2024-07-22T09:30:00Z') },
-  { id: 'sheet-4', level: 'L', packSize: 36, startNumber: 1, endNumber: 36, isAssigned: false, downloads: 0, generationDate: new Date() },
+  { id: 'sheet-4', level: 'L', packSize: 38, startNumber: 1, endNumber: 38, isAssigned: false, downloads: 0, generationDate: new Date() },
 ];
 
 export const mockFamilies: Family[] = [

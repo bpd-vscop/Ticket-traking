@@ -1,8 +1,8 @@
 export type Level = "P" | "C" | "L" | "S" | "E";
 export const levels: Level[] = ["P", "C", "L", "S", "E"];
 
-export type PackSize = 24 | 36;
-export const packSizes: PackSize[] = [24, 36];
+export type PackSize = 24 | 38;
+export const packSizes: PackSize[] = [24, 38];
 
 export type PaymentMethod = "cash" | "cheque" | "card";
 

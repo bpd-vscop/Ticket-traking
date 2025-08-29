@@ -86,12 +86,13 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
     const currentYear = new Date().getFullYear().toString().slice(-2);
 
     const ticketGrid = (sheetIndex: number) => {
-        const gridClass = packSize === 36 ? "grid-cols-9" : "grid-cols-6";
+        const gridClass = packSize === 24 ? "grid-cols-6" : "grid-cols-[repeat(19,minmax(0,1fr))]";
+        const numRows = packSize === 24 ? 4 : 2;
         const startNumber = initialStartNumber + (sheetIndex * packSize);
         return (
-            <div className={`grid ${gridClass}`}>
+            <div className={`grid ${gridClass} grid-rows-${numRows}`}>
                 {Array.from({ length: packSize }).map((_, i) => (
-                    <div key={i} className="aspect-[4/3] bg-white border-dashed border border-gray-400 flex">
+                    <div key={i} className="aspect-square bg-white border-dashed border border-gray-400 flex">
                         <div className="relative flex-[3] flex items-center justify-center p-1 border-r border-dashed border-gray-400">
                            <Image
                                 src={logoSrc}
@@ -127,7 +128,7 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
                {Array.from({length: count}).map((_, i) => (
                     <div key={i} className="bg-muted p-4 rounded-lg">
                         <h3 className="font-semibold mb-2 text-center text-sm">Sheet {i+1} of {count}</h3>
-                         <div className="aspect-[3/2] w-full bg-slate-200">
+                         <div className="w-full bg-slate-200 p-2" style={{aspectRatio: '45 / 32'}}>
                             {ticketGrid(i)}
                         </div>
                     </div>
