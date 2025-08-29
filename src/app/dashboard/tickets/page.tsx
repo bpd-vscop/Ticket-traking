@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -96,14 +96,14 @@ const SheetPreview = ({ level, packSize, count, logoSrc }: { level: Level, packS
                            <Image
                                 src={logoSrc}
                                 alt="Logo"
-                                width={40}
-                                height={40}
+                                width={100}
+                                height={100}
                                 className="rounded-full opacity-50"
                                 data-ai-hint="logo placeholder"
                             />
                         </div>
-                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono text-[8px] p-0.5">
-                             <p className="font-bold tracking-wider [writing-mode:vertical-rl] rotate-180">
+                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-2">
+                             <p className="text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180">
                                 {level}-{currentYear}{String(startNumber + i + 1).padStart(3, '0')}
                             </p>
                         </div>
@@ -153,18 +153,18 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                 className="flex items-center gap-2"
             >
                 {options.map(opt => (
-                     <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="hidden"/>
+                     <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="peer hidden"/>
                      
                 ))}
-                 <RadioGroupItem value="custom" id="gen-opt-custom" className="hidden"/>
+                 <RadioGroupItem value="custom" id="gen-opt-custom" className="peer hidden"/>
 
                 {options.map(opt => (
                     <Label
                         key={opt}
                         htmlFor={`gen-opt-${opt}`}
                         className={cn(
-                            "flex items-center justify-center h-10 w-10 rounded-full border cursor-pointer transition-colors",
-                            value === opt && !isCustom ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                            "flex items-center justify-center h-10 w-10 rounded-md border cursor-pointer transition-colors",
+                            "peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground hover:bg-muted"
                         )}
                     >
                         {opt}
@@ -182,7 +182,7 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                     }}
                     className={cn(
                         "w-24 h-10 text-center",
-                        isCustom ? "border-primary ring-2 ring-primary" : ""
+                        "peer-data-[state=checked]:border-primary peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary"
                     )}
                  />
             </RadioGroup>
@@ -288,5 +288,3 @@ export default function TicketsPage() {
     </div>
   );
 }
-
-    
