@@ -25,7 +25,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex items-center justify-center min-h-screen bg-muted/40">
       <Card className="w-full max-w-sm shadow-2xl">
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center">
@@ -54,7 +54,7 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button type="submit" className="w-full">
               Log In
             </Button>
           </CardFooter>

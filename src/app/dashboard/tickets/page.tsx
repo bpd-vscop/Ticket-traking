@@ -195,7 +195,7 @@ export default function TicketsPage() {
               </DialogTrigger>
               <SheetPreview level={level} packSize={packSize} count={generatedCount} />
             </Dialog>
-          <Button onClick={handleGenerate} className="bg-accent hover:bg-accent/90">
+          <Button onClick={handleGenerate}>
             <Sparkles className="mr-2 h-4 w-4" />
             Generate
           </Button>

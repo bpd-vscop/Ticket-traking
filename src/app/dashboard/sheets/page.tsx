@@ -176,7 +176,7 @@ const AssignmentModal = ({
             </div>
             <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-accent hover:bg-accent/90">Assign</Button>
+                <Button type="submit">Assign</Button>
             </DialogFooter>
         </form>
       </DialogContent>
@@ -210,7 +210,6 @@ export default function SheetsPage() {
             <Button 
                 onClick={() => setIsModalOpen(true)}
                 disabled={selectedSheets.length === 0}
-                className="bg-accent hover:bg-accent/90"
             >
                 Assign Selected ({selectedSheets.length})
             </Button>
