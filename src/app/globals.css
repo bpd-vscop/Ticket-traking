@@ -63,3 +63,143 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+/* ====== Real-size utilities for the ticket sheet (45cm × 32cm) ====== */
+@layer utilities {
+  /* Exact sheet size in physical units */
+  .sheet-45x32 {
+    width: 45cm;
+    height: 32cm;
+    box-sizing: border-box;
+  }
+
+  /* Prevent flex/grid from shrinking the sheet */
+  .sheet-noshrink {
+    flex: 0 0 auto;
+  }
+}
+
+/* Exact size on print/PDF too */
+@media print {
+  @page {
+    size: 45cm 32cm;
+    margin: 0;
+  }
+  .sheet-45x32 {
+    width: 45cm !important;
+    height: 32cm !important;
+  }
+}
+/* ===== Responsive on-screen sheet + exact-size print ===== */
+@layer utilities {
+  /* Scaled preview that fits the viewport while keeping 45:32 ratio */
+  .sheet-viewport {
+    width: min(100%, 1100px); /* fits most screens; adjust if you want larger */
+    aspect-ratio: 45 / 32;
+    background: white;
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    box-sizing: border-box;
+    margin-inline: auto;
+  }
+
+  /* Inner padding mimics the real margins when squares are 5.5cm
+     Real margins: 0.5cm left/right, 2.25cm top/bottom
+     As percentage of the sheet (45x32): 
+        horizontal: 0.5 / 45  = 1.111111%
+        vertical:   2.25 / 32 = 7.03125%
+  */
+  .sheet-inner {
+    width: 100%;
+    height: 100%;
+    padding: 7.03125% 1.111111%;
+    box-sizing: border-box;
+  }
+
+  /* 8x5 grid on screen (auto-scales). Rows stay square via aspect-ratio on items */
+  .grid-sheet {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-auto-rows: 1fr; /* each track is same fraction; items square themselves */
+    gap: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* A single ticket square (on screen it’s square via aspect-ratio) */
+  .ticket {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: white;
+    border: 1px dashed hsl(var(--border));
+    display: flex;
+  }
+
+  .ticket__left {
+    position: relative;
+    flex: 3 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2%;
+    border-right: 1px dashed hsl(var(--border));
+  }
+
+  .ticket__right {
+    flex: 1 1 0;
+    background: #1f2937; /* slate-800 */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  .ticket__code {
+    font-weight: 800;
+    letter-spacing: .2em;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    line-height: 1;
+  }
+}
+
+/* ===== Print: exact physical dimensions ===== */
+@media print {
+  @page {
+    size: 45cm 32cm;
+    margin: 0;
+  }
+
+  .sheet-viewport {
+    width: 45cm !important;
+    height: 32cm !important;
+    aspect-ratio: auto; /* explicit size wins on print */
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Exact margins to center the 5.5cm grid: top/bottom 2.25cm, left/right 0.5cm */
+  .sheet-inner {
+    padding: 2.25cm 0.5cm !important;
+  }
+
+  /* Force exact grid to 5.5cm squares */
+  .grid-sheet {
+    grid-template-columns: repeat(8, 5.5cm) !important;
+    grid-auto-rows: 5.5cm !important;
+    width: 100%;
+    height: 100%;
+  }
+
+  .ticket {
+    width: 5.5cm !important;
+    height: 5.5cm !important;
+    aspect-ratio: auto !important;
+  }
+
+  /* Crisp print */
+  img, svg, canvas {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

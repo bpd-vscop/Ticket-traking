@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +34,10 @@ import { CardDescription as DialogCardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 
+const COLS = 8;
+const ROWS = 5;
+const CAPACITY = COLS * ROWS; // 40
+const TICKET_SIZE_CM = 5.5; // used in print CSS via globals
 
 const TicketPreview = ({
   level,
@@ -82,116 +85,179 @@ const TicketPreview = ({
   );
 };
 
-const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialStartNumber }: { level: Level, packSize: PackSize, count: number, logoSrc: string, startNumber: number }) => {
-    const currentYear = new Date().getFullYear().toString().slice(-2);
+function TicketCell({
+  index,
+  code,
+  logoSrc,
+  isBlank,
+}: {
+  index: number;
+  code: string;
+  logoSrc: string;
+  isBlank: boolean;
+}) {
+  if (isBlank) {
+    return <div className="ticket bg-muted/40" aria-hidden="true" />;
+  }
 
-    const ticketGrid = (sheetIndex: number) => {
-        const columns = 7;
-        const rows = Math.ceil(packSize / columns);
-        const startNumber = initialStartNumber + (sheetIndex * packSize);
-        return (
-            <div className={`grid grid-cols-7`} style={{gridTemplateRows: `repeat(${rows}, 1fr)`}}>
-                {Array.from({ length: packSize }).map((_, i) => (
-                    <div key={i} className="aspect-square bg-white border-dashed border border-gray-400 flex" style={{width: '5.5cm', height: '5.5cm'}}>
-                        <div className="relative flex-[3] flex items-center justify-center p-1 border-r border-dashed border-gray-400">
-                           <Image
-                                src={logoSrc}
-                                alt="Logo"
-                                width={40}
-                                height={40}
-                                className="rounded-full opacity-50"
-                                data-ai-hint="logo placeholder"
-                            />
-                        </div>
-                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-0.5 overflow-hidden">
-                             <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 scale-[0.3]">
-                                {level}-{currentYear}{String(startNumber + i + 1).padStart(3, '0')}
-                            </p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        )
-    };
-
-    if(count === 0) return null;
-
-    return (
-        <DialogContent className="max-w-4xl">
-            <DialogHeader>
-                <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
-                <DialogCardDescription>
-                    Generated {count} sheet{count > 1 ? 's' : ''} for Level {level} with {packSize} tickets each.
-                </DialogCardDescription>
-            </DialogHeader>
-            <div className="max-h-[70vh] overflow-y-auto p-1 space-y-4">
-               {Array.from({length: count}).map((_, i) => (
-                    <div key={i} className="bg-muted p-4 rounded-lg">
-                        <h3 className="font-semibold mb-2 text-center text-sm">Sheet {i+1} of {count}</h3>
-                         <div className="w-full bg-white p-2 inline-block" style={{aspectRatio: '45 / 32'}}>
-                            {ticketGrid(i)}
-                        </div>
-                    </div>
-               ))}
-            </div>
-        </DialogContent>
-    )
+  return (
+    <div className="ticket">
+      <div className="ticket__left">
+        <Image
+          src={logoSrc}
+          alt="Logo"
+          width={80}
+          height={80}
+          className="rounded-full opacity-60"
+          data-ai-hint="logo placeholder"
+        />
+      </div>
+      <div className="ticket__right p-0.5">
+        <span className="ticket__code">{code}</span>
+      </div>
+    </div>
+  );
 }
 
-const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (value: number) => void }) => {
-    const options = [1, 2, 3, 4];
-    const isCustom = !options.includes(value);
+const SheetPreview = ({
+  level,
+  packSize,
+  count,
+  logoSrc,
+  startNumber: initialStartNumber,
+}: {
+  level: Level;
+  packSize: PackSize; // expect 24 or 38, but any <= 40 works
+  count: number;
+  logoSrc: string;
+  startNumber: number;
+}) => {
+  const currentYear = new Date().getFullYear().toString().slice(-2);
 
+  const gridForSheet = (sheetIndex: number) => {
+    const startNumber = initialStartNumber + sheetIndex * packSize;
+
+    // We render full capacity (40). First `packSize` cells are tickets; the rest are blanks.
+    // For 24: first 24 tickets occupy rows 1-3; rows 4-5 entirely blank (your requirement).
+    // For 38: first 38 tickets filled; last 2 cells (positions 39 & 40) blank.
     return (
-        <div className="space-y-4">
-            <RadioGroup 
-                value={isCustom ? "custom" : String(value)} 
-                onValueChange={(val) => {
-                    if (val !== 'custom') {
-                        onChange(Number(val));
-                    }
-                }} 
-                className="flex items-center gap-2"
-            >
-                {options.map(opt => (
-                     <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="sr-only"/>
-                ))}
-                 <RadioGroupItem value="custom" id="gen-opt-custom" className="sr-only"/>
+      <div className="grid-sheet">
+        {Array.from({ length: CAPACITY }).map((_, i) => {
+          const isBlank = i >= packSize;
+          const serial = String(startNumber + i + 1).padStart(3, "0");
+          const code = `${level}-${currentYear}${serial}`;
+          return (
+            <TicketCell
+              key={i}
+              index={i}
+              code={code}
+              logoSrc={logoSrc}
+              isBlank={isBlank}
+            />
+          );
+        })}
+      </div>
+    );
+  };
 
-                {options.map(opt => (
-                    <Label
-                        key={opt}
-                        htmlFor={`gen-opt-${opt}`}
-                        className={cn(
-                            "flex items-center justify-center h-10 w-10 rounded-full border-2 cursor-pointer transition-colors text-sm font-medium",
-                            value === opt && !isCustom 
-                                ? "bg-primary text-primary-foreground border-primary" 
-                                : "bg-background hover:bg-accent hover:text-accent-foreground border-input"
-                        )}
-                    >
-                        {opt}
-                    </Label>
-                ))}
-                
-                <Input
-                    type="number"
-                    min="1"
-                    placeholder="Custom"
-                    value={isCustom ? value : ''}
-                    onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
-                    onFocus={() => {
-                        if(!isCustom) onChange(5)
-                    }}
-                    className={cn(
-                        "w-24 h-10 text-center rounded-full border-2",
-                        isCustom ? "border-primary ring-2 ring-primary/50" : "border-input"
-                    )}
-                 />
-            </RadioGroup>
-        </div>
-    )
-}
+  if (count === 0) return null;
 
+  return (
+    <DialogContent className="max-w-[95vw]">
+      <DialogHeader>
+        <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
+        <DialogCardDescription>
+          Each sheet prints at 45×32&nbsp;cm with 8×5 slots of 5.5&nbsp;cm. Pack {packSize}:{" "}
+          {packSize === 24
+            ? "rows 4 & 5 left empty"
+            : packSize === 38
+            ? "last 2 cells left empty"
+            : `first ${packSize} filled, remaining blanks`}
+          .
+        </DialogCardDescription>
+      </DialogHeader>
+
+      {/* Scrollable area; the sheet scales to fit screen */}
+      <div className="max-h-[70vh] overflow-auto p-1 space-y-6">
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="bg-muted p-4 rounded-lg">
+            <h3 className="font-semibold mb-2 text-center text-sm">
+              Sheet {i + 1} of {count}
+            </h3>
+
+            {/* On-screen scaled sheet; print rules switch it to exact cm size */}
+            <div className="sheet-viewport mx-auto">
+              <div className="sheet-inner">{gridForSheet(i)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </DialogContent>
+  );
+};
+
+const GenerationsSelector = ({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) => {
+  const options = [1, 2, 3, 4];
+  const isCustom = !options.includes(value);
+
+  return (
+    <div className="space-y-4">
+      <RadioGroup
+        value={isCustom ? "custom" : String(value)}
+        onValueChange={(val) => {
+          if (val !== "custom") onChange(Number(val));
+        }}
+        className="flex items-center gap-2"
+      >
+        {options.map((opt) => (
+          <RadioGroupItem
+            key={opt}
+            value={String(opt)}
+            id={`gen-opt-${opt}`}
+            className="sr-only"
+          />
+        ))}
+        <RadioGroupItem value="custom" id="gen-opt-custom" className="sr-only" />
+
+        {options.map((opt) => (
+          <Label
+            key={opt}
+            htmlFor={`gen-opt-${opt}`}
+            className={cn(
+              "flex items-center justify-center h-10 w-10 rounded-full border-2 cursor-pointer transition-colors text-sm font-medium",
+              value === opt && !isCustom
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent hover:text-accent-foreground border-input"
+            )}
+          >
+            {opt}
+          </Label>
+        ))}
+
+        <Input
+          type="number"
+          min="1"
+          placeholder="Custom"
+          value={isCustom ? value : ""}
+          onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
+          onFocus={() => {
+            if (!isCustom) onChange(5);
+          }}
+          className={cn(
+            "w-24 h-10 text-center rounded-full border-2",
+            isCustom ? "border-primary ring-2 ring-primary/50" : "border-input"
+          )}
+        />
+      </RadioGroup>
+    </div>
+  );
+};
 
 export default function TicketsPage() {
   const [level, setLevel] = useState<Level>("P");
@@ -205,7 +271,7 @@ export default function TicketsPage() {
 
   const handleGenerate = () => {
     // In a real app, this might come from a database to ensure uniqueness
-    const newStartNumber = Math.floor(Math.random() * 10000); 
+    const newStartNumber = Math.floor(Math.random() * 10000);
     setStartNumber(newStartNumber);
     setGeneratedCount(generations);
     toast({
@@ -247,9 +313,13 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="pack-size">Pack Size</Label>
-            <Select onValueChange={(v) => setPackSize(Number(v) as PackSize)} defaultValue={String(packSize)}>
+            <Select
+              onValueChange={(v) => setPackSize(Number(v) as PackSize)}
+              defaultValue={String(packSize)}
+            >
               <SelectTrigger id="pack-size">
                 <SelectValue placeholder="Select pack size" />
               </SelectTrigger>
@@ -262,18 +332,28 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label>Number of Sheets</Label>
             <GenerationsSelector value={generations} onChange={setGenerations} />
           </div>
         </CardContent>
+
         <CardFooter className="flex justify-between">
-           <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" disabled={generatedCount === 0}>View Sheets</Button>
-              </DialogTrigger>
-              <SheetPreview level={level} packSize={packSize} count={generatedCount} logoSrc={logo} startNumber={startNumber} />
-            </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={generatedCount === 0}>
+                View Sheets
+              </Button>
+            </DialogTrigger>
+            <SheetPreview
+              level={level}
+              packSize={packSize}
+              count={generatedCount}
+              logoSrc={logo}
+              startNumber={startNumber}
+            />
+          </Dialog>
           <Button onClick={handleGenerate}>
             <Sparkles className="mr-2 h-4 w-4" />
             Generate
