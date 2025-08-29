@@ -128,7 +128,7 @@ const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialSta
                {Array.from({length: count}).map((_, i) => (
                     <div key={i} className="bg-muted p-4 rounded-lg">
                         <h3 className="font-semibold mb-2 text-center text-sm">Sheet {i+1} of {count}</h3>
-                         <div className="w-full bg-slate-200 p-2" style={{aspectRatio: '45 / 32'}}>
+                         <div className="w-full bg-white p-2" style={{aspectRatio: '45 / 32'}}>
                             {ticketGrid(i)}
                         </div>
                     </div>
