@@ -43,14 +43,14 @@ const TicketPreview = ({
   const currentYear = new Date().getFullYear().toString().slice(-2);
 
   return (
-    <div className="w-full aspect-[16/9] flex items-center justify-center p-4 bg-muted rounded-lg">
+    <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
       <div
-        className="relative w-[320px] h-[180px] bg-card rounded-xl shadow-lg overflow-hidden flex"
+        className="relative w-[250px] h-[250px] bg-card rounded-xl shadow-lg overflow-hidden flex flex-col"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Left part */}
-        <div className="relative w-2/5 flex items-center justify-center p-4">
+        {/* Top part */}
+        <div className="relative h-2/5 flex items-center justify-center p-4">
           <Image src={logoSrc} alt="Logo" width={80} height={80} className="rounded-full opacity-80" data-ai-hint="logo placeholder" />
            {isHovered && (
             <Button
@@ -63,8 +63,8 @@ const TicketPreview = ({
           )}
         </div>
         
-        {/* Right part */}
-        <div className="w-3/5 bg-slate-800 text-white flex flex-col items-center justify-center font-mono">
+        {/* Bottom part */}
+        <div className="h-3/5 bg-slate-800 text-white flex flex-col items-center justify-center font-mono">
             <p className="text-4xl font-bold tracking-wider">{level}</p>
             <p className="text-lg tracking-widest">{currentYear}-XXX</p>
         </div>
