@@ -43,26 +43,30 @@ const TicketPreview = ({
   const currentYear = new Date().getFullYear().toString().slice(-2);
 
   return (
-    <div className="w-full aspect-video flex items-center justify-center">
+    <div className="w-full aspect-[16/9] flex items-center justify-center p-4 bg-muted rounded-lg">
       <div
-        className="relative w-[300px] h-[180px] bg-white rounded-lg shadow-lg overflow-hidden"
+        className="relative w-[320px] h-[180px] bg-card rounded-xl shadow-lg overflow-hidden flex"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="h-1/4 bg-slate-800 text-white flex items-center justify-center text-xl font-mono tracking-widest">
-          {level} - {currentYear}XXX
-        </div>
-        <div className="relative h-3/4 flex items-center justify-center">
-          <Image src={logoSrc} alt="Logo" width={100} height={100} className="opacity-20" data-ai-hint="logo placeholder" />
-          {isHovered && (
+        {/* Left part */}
+        <div className="relative w-2/5 flex items-center justify-center p-4">
+          <Image src={logoSrc} alt="Logo" width={80} height={80} className="rounded-full opacity-80" data-ai-hint="logo placeholder" />
+           {isHovered && (
             <Button
               variant="outline"
               size="sm"
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/80"
             >
-              <Edit className="mr-2 h-4 w-4" /> Edit Logo
+              <Edit className="mr-2 h-3 w-3" /> Logo
             </Button>
           )}
+        </div>
+        
+        {/* Right part */}
+        <div className="w-3/5 bg-slate-800 text-white flex flex-col items-center justify-center font-mono">
+            <p className="text-4xl font-bold tracking-wider">{level}</p>
+            <p className="text-lg tracking-widest">{currentYear}-XXX</p>
         </div>
       </div>
     </div>
@@ -131,7 +135,7 @@ export default function TicketsPage() {
 
   return (
     <div className="grid md:grid-cols-2 gap-8">
-      <Card className="shadow-lg">
+      <Card>
         <CardHeader>
           <CardTitle>Generate New Tickets</CardTitle>
           <CardDescription>
@@ -203,7 +207,7 @@ export default function TicketsPage() {
       </Card>
 
       <div className="flex flex-col gap-4">
-        <Card className="flex-1 shadow-lg">
+        <Card>
           <CardHeader>
             <CardTitle>Ticket Preview</CardTitle>
           </CardHeader>
