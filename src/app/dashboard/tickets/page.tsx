@@ -45,28 +45,36 @@ const TicketPreview = ({
   return (
     <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
       <div
-        className="relative w-[250px] h-[250px] bg-card rounded-xl shadow-lg overflow-hidden flex flex-col"
+        className="relative w-[250px] h-[250px] bg-card rounded-xl shadow-lg overflow-hidden flex"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Top part */}
-        <div className="relative h-2/5 flex items-center justify-center p-4">
-          <Image src={logoSrc} alt="Logo" width={80} height={80} className="rounded-full opacity-80" data-ai-hint="logo placeholder" />
-           {isHovered && (
+        {/* Left part */}
+        <div className="relative flex-[3] flex items-center justify-center p-4">
+          <Image
+            src={logoSrc}
+            alt="Logo"
+            width={150}
+            height={150}
+            className="rounded-full opacity-80"
+            data-ai-hint="logo placeholder"
+          />
+          {isHovered && (
             <Button
               variant="outline"
               size="sm"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/80"
+              className="absolute bottom-6 right-6 bg-background/80"
             >
-              <Edit className="mr-2 h-3 w-3" /> Logo
+              <Edit className="h-3 w-3" />
             </Button>
           )}
         </div>
-        
-        {/* Bottom part */}
-        <div className="h-3/5 bg-slate-800 text-white flex flex-col items-center justify-center font-mono">
-            <p className="text-4xl font-bold tracking-wider">{level}</p>
-            <p className="text-lg tracking-widest">{currentYear}-XXX</p>
+
+        {/* Right part */}
+        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-2">
+          <p className="text-2xl font-bold tracking-widest [writing-mode:vertical-rl] text-orientation-mixed rotate-180">
+            {level}-{currentYear}XXX
+          </p>
         </div>
       </div>
     </div>
