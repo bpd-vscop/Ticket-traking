@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,12 +82,12 @@ const TicketPreview = ({
   );
 };
 
-const SheetPreview = ({ level, packSize, count, logoSrc }: { level: Level, packSize: PackSize, count: number, logoSrc: string }) => {
+const SheetPreview = ({ level, packSize, count, logoSrc, startNumber: initialStartNumber }: { level: Level, packSize: PackSize, count: number, logoSrc: string, startNumber: number }) => {
     const currentYear = new Date().getFullYear().toString().slice(-2);
 
     const ticketGrid = (sheetIndex: number) => {
         const gridClass = packSize === 36 ? "grid-cols-9" : "grid-cols-6";
-        const startNumber = sheetIndex * packSize;
+        const startNumber = initialStartNumber + (sheetIndex * packSize);
         return (
             <div className={`grid ${gridClass}`}>
                 {Array.from({ length: packSize }).map((_, i) => (
@@ -96,14 +96,14 @@ const SheetPreview = ({ level, packSize, count, logoSrc }: { level: Level, packS
                            <Image
                                 src={logoSrc}
                                 alt="Logo"
-                                width={100}
-                                height={100}
+                                width={40}
+                                height={40}
                                 className="rounded-full opacity-50"
                                 data-ai-hint="logo placeholder"
                             />
                         </div>
-                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-2">
-                             <p className="text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180">
+                        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-0.5">
+                             <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 scale-50">
                                 {level}-{currentYear}{String(startNumber + i + 1).padStart(3, '0')}
                             </p>
                         </div>
@@ -127,7 +127,7 @@ const SheetPreview = ({ level, packSize, count, logoSrc }: { level: Level, packS
                {Array.from({length: count}).map((_, i) => (
                     <div key={i} className="bg-muted p-4 rounded-lg">
                         <h3 className="font-semibold mb-2 text-center text-sm">Sheet {i+1} of {count}</h3>
-                         <div className="aspect-[3/2] w-full bg-slate-200 p-2 rounded">
+                         <div className="aspect-[3/2] w-full bg-slate-200">
                             {ticketGrid(i)}
                         </div>
                     </div>
@@ -153,18 +153,19 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                 className="flex items-center gap-2"
             >
                 {options.map(opt => (
-                     <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="peer hidden"/>
-                     
+                     <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="sr-only"/>
                 ))}
-                 <RadioGroupItem value="custom" id="gen-opt-custom" className="peer hidden"/>
+                 <RadioGroupItem value="custom" id="gen-opt-custom" className="sr-only"/>
 
                 {options.map(opt => (
                     <Label
                         key={opt}
                         htmlFor={`gen-opt-${opt}`}
                         className={cn(
-                            "flex items-center justify-center h-10 w-10 rounded-md border cursor-pointer transition-colors",
-                            "peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground hover:bg-muted"
+                            "flex items-center justify-center h-10 w-10 rounded-full border cursor-pointer transition-colors text-sm font-medium",
+                            value === opt && !isCustom 
+                                ? "bg-primary text-primary-foreground border-primary" 
+                                : "bg-background hover:bg-accent hover:text-accent-foreground"
                         )}
                     >
                         {opt}
@@ -174,7 +175,7 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                 <Input
                     type="number"
                     min="1"
-                    placeholder="e.g., 10"
+                    placeholder="Custom"
                     value={isCustom ? value : ''}
                     onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
                     onFocus={() => {
@@ -182,7 +183,7 @@ const GenerationsSelector = ({ value, onChange }: { value: number, onChange: (va
                     }}
                     className={cn(
                         "w-24 h-10 text-center",
-                        "peer-data-[state=checked]:border-primary peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-primary"
+                        isCustom ? "border-primary ring-2 ring-primary-focus" : ""
                     )}
                  />
             </RadioGroup>
@@ -197,10 +198,14 @@ export default function TicketsPage() {
   const [generations, setGenerations] = useState(1);
   const [logo, setLogo] = useState("https://picsum.photos/200/200");
   const [generatedCount, setGeneratedCount] = useState(0);
+  const [startNumber, setStartNumber] = useState(0);
 
   const { toast } = useToast();
 
   const handleGenerate = () => {
+    // In a real app, this might come from a database to ensure uniqueness
+    const newStartNumber = Math.floor(Math.random() * 10000); 
+    setStartNumber(newStartNumber);
     setGeneratedCount(generations);
     toast({
       title: "Sheets Generated!",
@@ -266,7 +271,7 @@ export default function TicketsPage() {
               <DialogTrigger asChild>
                 <Button variant="outline" disabled={generatedCount === 0}>View Sheets</Button>
               </DialogTrigger>
-              <SheetPreview level={level} packSize={packSize} count={generatedCount} logoSrc={logo} />
+              <SheetPreview level={level} packSize={packSize} count={generatedCount} logoSrc={logo} startNumber={startNumber} />
             </Dialog>
           <Button onClick={handleGenerate}>
             <Sparkles className="mr-2 h-4 w-4" />
@@ -288,3 +293,5 @@ export default function TicketsPage() {
     </div>
   );
 }
+
+    
