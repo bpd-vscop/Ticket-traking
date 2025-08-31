@@ -41,6 +41,92 @@ const COLS = 8;
 const ROWS = 5;
 const CAPACITY = COLS * ROWS; // 40
 
+const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
+    /*
+     * HOW TO EDIT THIS SVG LAYOUT
+     * This function generates an SVG string for a sheet of tickets.
+     * You can customize the layout by changing the variables below.
+     *
+     * -- UNITS --
+     * All dimensions are in millimeters (mm), as if for a physical page.
+     *
+     * -- CUSTOMIZATION VARIABLES --
+     * sheetWidth, sheetHeight: The size of the physical paper.
+     * cols, rows: The number of columns and rows in the grid.
+     * ticketWidth, ticketHeight: The size of a single ticket.
+     *
+     * -- TICKET LAYOUT --
+     * The ticket is split into a left (logo) and right (text) part.
+     * - The `image` tag controls the logo's position and size.
+     * - The `text` tag controls the reference number. Its `transform` attribute
+     *   positions and rotates it. `font-size`, `letter-spacing`, etc.,
+     *   control its appearance.
+     */
+    const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+    const { packSize, level } = sheet;
+
+    // --- Layout Customization ---
+    const ticketWidth = 55; // 5.5cm in mm
+    const ticketHeight = 55; // 5.5cm in mm
+    const sheetWidth = 450;  // 45cm in mm
+    const sheetHeight = 320; // 32cm in mm
+    const cols = 8;
+    // --- End Customization ---
+
+    let ticketsSvg = '';
+    for (let i = 0; i < packSize; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const x = col * ticketWidth;
+        const y = row * ticketHeight;
+        const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
+        const nn = String(serial).padStart(4, "0");
+        const code = `${level}-${currentYear}${nn}`;
+
+        // Each ticket is a <g> group element, positioned with a transform.
+        ticketsSvg += `
+        <g transform="translate(${x}, ${y})">
+            {/* Dashed border for cutting */}
+            <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
+
+            {/* Right-side dark bar */}
+            <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketHeight}" fill="#1f2937" />
+
+            {/* Logo: Positioned in the left 80% of the ticket. */}
+            <image href="${logoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
+
+            {/* Vertically rotated reference text */}
+            <text
+                transform="translate(${ticketWidth * 0.9}, ${ticketHeight / 2}) rotate(90) translate(0, ${code.length * -3.5}) rotate(180)"
+                fill="white"
+                font-family="monospace"
+                font-size="8"
+                font-weight="bold"
+                text-anchor="middle"
+                letter-spacing="1.5"
+                writing-mode="vertical-rl"
+            >
+                ${code}
+            </text>
+        </g>
+        `;
+    }
+
+    return `
+    <svg
+        width="${sheetWidth}mm"
+        height="${sheetHeight}mm"
+        viewBox="0 0 ${sheetWidth} ${sheetHeight}"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+    >
+        <rect width="100%" height="100%" fill="white" />
+        ${ticketsSvg}
+    </svg>
+    `;
+};
+
+
 /* ------------------------------ Logo Uploader ----------------------------- */
 const LogoUploader = ({
   logoSrc,
@@ -499,5 +585,3 @@ export default function TicketsPage() {
     </div>
   );
 }
-
-    
