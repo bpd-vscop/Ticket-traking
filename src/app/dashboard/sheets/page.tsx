@@ -40,6 +40,61 @@ import { useToast } from "@/hooks/use-toast";
 
 const mockSheets = getSheets();
 
+const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
+    const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+    const { packSize, level } = sheet;
+
+    const ticketWidth = 55; // 5.5cm in mm
+    const sheetWidth = 450; // 45cm in mm
+    const sheetHeight = 320; // 32cm in mm
+    const cols = 8;
+    const rows = 5;
+    
+    let ticketsSvg = '';
+    for (let i = 0; i < packSize; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const x = col * ticketWidth;
+        const y = row * ticketWidth;
+        const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
+        const nn = String(serial).padStart(4, "0");
+        const code = `${level}-${currentYear}${nn}`;
+
+        ticketsSvg += `
+        <g transform="translate(${x}, ${y})">
+            <rect width="${ticketWidth}" height="${ticketWidth}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
+            <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketWidth}" fill="#1f2937" />
+            <image href="${logoSrc}" x="10" y="10" width="${ticketWidth * 0.6}" height="${ticketWidth * 0.6}" opacity="0.6" />
+            <text 
+                transform="translate(${ticketWidth * 0.9}, ${ticketWidth / 2}) rotate(90)" 
+                fill="white" 
+                font-family="monospace"
+                font-size="10" 
+                font-weight="bold"
+                text-anchor="middle"
+                letter-spacing="2"
+            >
+                ${code}
+            </text>
+        </g>
+        `;
+    }
+
+    return `
+    <svg 
+        width="${sheetWidth}mm" 
+        height="${sheetHeight}mm" 
+        viewBox="0 0 ${sheetWidth} ${sheetHeight}" 
+        xmlns="http://www.w3.org/2000/svg" 
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+    >
+        <rect width="100%" height="100%" fill="white" />
+        ${ticketsSvg}
+    </svg>
+    `;
+};
+
+
 const SheetCard = ({
   sheet,
   isSelected,
@@ -53,11 +108,18 @@ const SheetCard = ({
   const currentYear = new Date().getFullYear().toString().slice(-2);
 
   const handleDownload = () => {
+    const logoSrc = localStorage.getItem('ticketLogo') || '/logo.svg';
+    const svgContent = generateSheetSvg(sheet, logoSrc);
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sheet-${sheet.level}-${sheet.startNumber}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     setDownloadCount((prev) => prev + 1);
-    // In a real app, you would trigger a PDF generation flow here.
-    // For now, we just log to the console.
-    console.log("Downloading sheet:", sheet);
-    window.print(); // This will trigger the browser's print dialog
   };
 
   return (
@@ -92,7 +154,7 @@ const SheetCard = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={handleDownload}>
-              <FileText className="mr-2 h-4 w-4" /> PDF
+              <FileText className="mr-2 h-4 w-4" /> SVG
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -257,5 +319,7 @@ export default function SheetsPage() {
     </div>
   );
 }
+
+    
 
     
