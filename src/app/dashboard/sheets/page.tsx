@@ -92,7 +92,7 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
             <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketHeight}" fill="#1f2937" />
 
             {/* Logo: Positioned in the left 80% of the ticket. */}
-            <image href="${logoSrc}" x="5" y="5" width="${ticketWidth * 0.7}" height="${ticketHeight * 0.7}" preserveAspectRatio="xMidYMid meet" />
+            <image href="${logoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
 
             {/* Vertically rotated reference text */}
             <text
@@ -280,7 +280,7 @@ const AssignmentModal = ({
 };
 
 export default function SheetsPage() {
-  const [sheets, setSheets] = useState<Sheet[]>(mockSheets.filter(s => !s.isAssigned));
+  const [sheets, setSheets] = useState<Sheet[]>(getSheets().filter(s => !s.isAssigned));
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -353,3 +353,4 @@ export default function SheetsPage() {
     
 
     
+
