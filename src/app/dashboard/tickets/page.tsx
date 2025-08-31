@@ -113,7 +113,7 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
                 font-size="8"
                 font-weight="bold"
                 text-anchor="middle"
-                dominant-baseline="middle"
+                dominant-baseline="central"
                 letter-spacing="1.5"
                 style="writing-mode: vertical-rl;"
             >
@@ -123,6 +123,9 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
         `;
     }
 
+    const watermarkTile = 75.5; // in mm, approx 2cm
+    const watermarkStepY = watermarkTile * 0.866; // sqrt(3)/2
+
     return `
     <svg
         width="${sheetWidth}mm"
@@ -131,7 +134,17 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
         xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
     >
+        <defs>
+            <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                <image href="${logoSrc}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+            </pattern>
+             <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                <image href="${logoSrc}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+            </pattern>
+        </defs>
         <rect width="100%" height="100%" fill="white" />
+        <rect width="100%" height="100%" fill="url(#watermark)" />
+        <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
         ${ticketsSvg}
     </svg>
     `;
@@ -219,7 +232,7 @@ const TicketPreview = ({
         </div>
         {/* Right bar: center + 180° rotation */}
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
-          <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
+          <p className="m-0 leading-none text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
             {level}-{currentYear}XXX
           </p>
         </div>
