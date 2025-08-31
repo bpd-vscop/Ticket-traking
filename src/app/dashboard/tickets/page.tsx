@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,11 +34,12 @@ import { CardDescription as DialogCardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 
+/** Fixed grid: 8 cols × 5 rows = 40 slots of 5.5cm */
 const COLS = 8;
 const ROWS = 5;
 const CAPACITY = COLS * ROWS; // 40
-const TICKET_SIZE_CM = 5.5; // used in print CSS via globals
 
+/* ------------------------------ Ticket Preview ----------------------------- */
 const TicketPreview = ({
   level,
   logoSrc,
@@ -52,18 +53,17 @@ const TicketPreview = ({
   return (
     <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
       <div
-        className="relative w-[250px] h-[250px] bg-card shadow-lg overflow-hidden flex"
+        className="relative w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="relative flex-[3] flex items-center justify-center p-4">
+        <div className="relative flex items-center justify-center p-4">
           <Image
             src={logoSrc}
             alt="Logo"
             width={150}
             height={150}
             className="rounded-full opacity-80"
-            data-ai-hint="logo placeholder"
           />
           {isHovered && (
             <Button
@@ -75,7 +75,7 @@ const TicketPreview = ({
             </Button>
           )}
         </div>
-        <div className="flex-[1] bg-slate-800 text-white flex items-center justify-center font-mono p-2">
+        <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
           <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180">
             {level}-{currentYear}XXX
           </p>
@@ -85,21 +85,19 @@ const TicketPreview = ({
   );
 };
 
+/* ------------------------------ Ticket Cell -------------------------------- */
 function TicketCell({
-  index,
   code,
   logoSrc,
   isBlank,
 }: {
-  index: number;
   code: string;
   logoSrc: string;
   isBlank: boolean;
 }) {
   if (isBlank) {
-    return <div className="ticket bg-muted/40" aria-hidden="true" />;
+    return <div className="ticket ticket--blank" aria-hidden="true" />;
   }
-
   return (
     <div className="ticket">
       <div className="ticket__left">
@@ -109,53 +107,60 @@ function TicketCell({
           width={80}
           height={80}
           className="rounded-full opacity-60"
-          data-ai-hint="logo placeholder"
         />
       </div>
-      <div className="ticket__right p-0.5">
+      <div className="ticket__right">
+        {/* Keep same scale as the single TicketPreview */}
         <span className="ticket__code">{code}</span>
       </div>
     </div>
   );
 }
 
+/* ---------------------------- Sheet Preview -------------------------------- */
 const SheetPreview = ({
   level,
   packSize,
   count,
   logoSrc,
-  startNumber: initialStartNumber,
+  sheetStarts,
 }: {
   level: Level;
-  packSize: PackSize; // expect 24 or 38, but any <= 40 works
+  packSize: PackSize; // 24 or 38 (<=40)
   count: number;
   logoSrc: string;
-  startNumber: number;
+  sheetStarts: number[]; // starting serial (1..9999) per sheet
 }) => {
   const currentYear = new Date().getFullYear().toString().slice(-2);
 
-  const gridForSheet = (sheetIndex: number) => {
-    const startNumber = initialStartNumber + sheetIndex * packSize;
+  const renderSheet = (sheetIdx: number) => {
+    const startSerial = sheetStarts[sheetIdx]; // 1..9999
+    const codes: string[] = [];
 
-    // We render full capacity (40). First `packSize` cells are tickets; the rest are blanks.
-    // For 24: first 24 tickets occupy rows 1-3; rows 4-5 entirely blank (your requirement).
-    // For 38: first 38 tickets filled; last 2 cells (positions 39 & 40) blank.
+    // Produce exactly packSize codes for this sheet, sequential with wrap at 9999
+    for (let k = 0; k < packSize; k++) {
+      const serial = ((startSerial - 1 + k) % 9999) + 1; // 1..9999
+      const nn = String(serial).padStart(4, "0"); // 0001..9999
+      codes.push(`${level}-${currentYear}${nn}`);
+    }
+
+    // Fill to 40 cells (blanks at the end)
+    const cells = Array.from({ length: CAPACITY }).map((_, i) => {
+      const code = i < packSize ? codes[i] : "";
+      return (
+        <TicketCell
+          key={i}
+          code={code}
+          logoSrc={logoSrc}
+          isBlank={i >= packSize}
+        />
+      );
+    });
+
+    // Grid sits above the watermark
     return (
-      <div className="grid-sheet">
-        {Array.from({ length: CAPACITY }).map((_, i) => {
-          const isBlank = i >= packSize;
-          const serial = String(startNumber + i + 1).padStart(3, "0");
-          const code = `${level}-${currentYear}${serial}`;
-          return (
-            <TicketCell
-              key={i}
-              index={i}
-              code={code}
-              logoSrc={logoSrc}
-              isBlank={isBlank}
-            />
-          );
-        })}
+      <div className="sheet-grid-wrap">
+        <div className="grid-sheet relative z-10">{cells}</div>
       </div>
     );
   };
@@ -163,22 +168,21 @@ const SheetPreview = ({
   if (count === 0) return null;
 
   return (
-    <DialogContent className="max-w-[95vw]">
+    <DialogContent className="max-w-[95vw] p-4">
       <DialogHeader>
         <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
         <DialogCardDescription>
-          Each sheet prints at 45×32&nbsp;cm with 8×5 slots of 5.5&nbsp;cm. Pack {packSize}:{" "}
+          Prints at 45×32&nbsp;cm, 8×5 slots (5.5&nbsp;cm). Pack {packSize}:{" "}
           {packSize === 24
-            ? "rows 4 & 5 left empty"
+            ? "rows 4 & 5 empty"
             : packSize === 38
-            ? "last 2 cells left empty"
-            : `first ${packSize} filled, remaining blanks`}
+            ? "last 2 cells empty"
+            : `first ${packSize} filled, remaining blank`}
           .
         </DialogCardDescription>
       </DialogHeader>
 
-      {/* Scrollable area; the sheet scales to fit screen */}
-      <div className="max-h-[70vh] overflow-auto p-1 space-y-6">
+      <div className="max-h-[70vh] overflow-auto p-4 space-y-6">
         {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="bg-muted p-4 rounded-lg">
             <h3 className="font-semibold mb-2 text-center text-sm">
@@ -187,7 +191,10 @@ const SheetPreview = ({
 
             {/* On-screen scaled sheet; print rules switch it to exact cm size */}
             <div className="sheet-viewport mx-auto">
-              <div className="sheet-inner">{gridForSheet(i)}</div>
+              {/* Watermark behind the grid */}
+              <div className="sheet-inner paper-watermark sheet-inner--even">
+                {renderSheet(i)}
+              </div>
             </div>
           </div>
         ))}
@@ -196,6 +203,7 @@ const SheetPreview = ({
   );
 };
 
+/* -------------------------- Generations Selector --------------------------- */
 const GenerationsSelector = ({
   value,
   onChange,
@@ -259,24 +267,51 @@ const GenerationsSelector = ({
   );
 };
 
+/* --------------------------------- Page ----------------------------------- */
+type CounterMap = Record<string, number>; // key: `${level}-${yy}` -> last used serial (1..9999)
+
 export default function TicketsPage() {
   const [level, setLevel] = useState<Level>("P");
   const [packSize, setPackSize] = useState<PackSize>(24);
   const [generations, setGenerations] = useState(1);
   const [logo, setLogo] = useState("https://picsum.photos/200/200");
+
+  // sequential counters per (level, year)
+  const [counters, setCounters] = useState<CounterMap>({});
+
+  // start serial (1..9999) for each generated sheet
+  const [sheetStarts, setSheetStarts] = useState<number[]>([]);
   const [generatedCount, setGeneratedCount] = useState(0);
-  const [startNumber, setStartNumber] = useState(0);
 
   const { toast } = useToast();
 
+  const yy = useMemo(
+    () => new Date().getFullYear().toString().slice(-2),
+    []
+  );
+
   const handleGenerate = () => {
-    // In a real app, this might come from a database to ensure uniqueness
-    const newStartNumber = Math.floor(Math.random() * 10000);
-    setStartNumber(newStartNumber);
+    const key = `${level}-${yy}`;
+    const lastUsed = counters[key] ?? 0; // 0 => next is 1
+    const newSheetStarts: number[] = [];
+
+    // For N sheets, allocate sequential ranges of packSize each
+    for (let s = 0; s < generations; s++) {
+      const startSerial = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
+      newSheetStarts.push(startSerial);
+    }
+
+    // Compute new last used after allocating all sheets
+    const totalTickets = generations * packSize;
+    const newLast = ((lastUsed + totalTickets) % 9999) || 9999;
+
+    setCounters((prev) => ({ ...prev, [key]: newLast }));
+    setSheetStarts(newSheetStarts);
     setGeneratedCount(generations);
+
     toast({
-      title: "Sheets Generated!",
-      description: `${generations} sheet(s) for level ${level} with ${packSize} tickets have been created.`,
+      title: "Sheets Generated",
+      description: `${generations} sheet(s) for ${level}-${yy} (${packSize} tickets each).`,
     });
   };
 
@@ -351,7 +386,7 @@ export default function TicketsPage() {
               packSize={packSize}
               count={generatedCount}
               logoSrc={logo}
-              startNumber={startNumber}
+              sheetStarts={sheetStarts}
             />
           </Dialog>
           <Button onClick={handleGenerate}>
