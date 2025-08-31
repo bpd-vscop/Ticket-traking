@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Level, PackSize, levels, packSizes } from "@/lib/types";
-import { Edit, Sparkles } from "lucide-react";
+import { Edit, Sparkles, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,68 @@ const COLS = 8;
 const ROWS = 5;
 const CAPACITY = COLS * ROWS; // 40
 
+/* ------------------------------ Logo Uploader ----------------------------- */
+const LogoUploader = ({
+  logoSrc,
+  onLogoChange,
+}: {
+  logoSrc: string;
+  onLogoChange: (src: string) => void;
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (typeof e.target?.result === "string") {
+          onLogoChange(e.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  return (
+    <div
+      className="relative w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleButtonClick}
+    >
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*"
+      />
+      <div className="relative w-[150px] h-[150px]">
+        <Image
+          src={logoSrc}
+          alt="Logo"
+          layout="fill"
+          objectFit="cover"
+          className="rounded-full opacity-80"
+        />
+        {(isHovered || logoSrc.includes('picsum')) && (
+          <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center text-white">
+            <Upload className="h-6 w-6" />
+            <span className="text-xs mt-1">Change Logo</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 /* ------------------------------ Ticket Preview ----------------------------- */
 const TicketPreview = ({
   level,
@@ -47,33 +109,19 @@ const TicketPreview = ({
   level: Level;
   logoSrc: string;
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
   const currentYear = new Date().getFullYear().toString().slice(-2);
 
   return (
     <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
-      <div
-        className="relative w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
+      <div className="w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]">
         <div className="relative flex items-center justify-center p-4">
-          <Image
-            src={logoSrc}
-            alt="Logo"
-            width={150}
-            height={150}
-            className="rounded-full opacity-80"
-          />
-          {isHovered && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="absolute bottom-6 right-6 bg-background/80"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-          )}
+           <Image
+              src={logoSrc}
+              alt="Logo"
+              width={150}
+              height={150}
+              className="rounded-full opacity-80"
+            />
         </div>
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
           <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180">
@@ -165,27 +213,34 @@ const SheetPreview = ({
     );
   };
 
+  const handlePrint = () => {
+    window.print();
+  }
+
   if (count === 0) return null;
 
   return (
     <DialogContent className="max-w-[95vw] p-4">
       <DialogHeader>
         <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
-        <DialogCardDescription>
-          Prints at 45×32&nbsp;cm, 8×5 slots (5.5&nbsp;cm). Pack {packSize}:{" "}
-          {packSize === 24
-            ? "rows 4 & 5 empty"
-            : packSize === 38
-            ? "last 2 cells empty"
-            : `first ${packSize} filled, remaining blank`}
-          .
+        <DialogCardDescription className="flex justify-between items-center">
+         <span>
+            Prints at 45×32&nbsp;cm, 8×5 slots (5.5&nbsp;cm). Pack {packSize}:{" "}
+            {packSize === 24
+              ? "rows 4 & 5 empty"
+              : packSize === 38
+              ? "last 2 cells empty"
+              : `first ${packSize} filled, remaining blank`}
+            .
+         </span>
+         <Button onClick={handlePrint} className="print:hidden">Print</Button>
         </DialogCardDescription>
       </DialogHeader>
 
-      <div className="max-h-[70vh] overflow-auto p-4 space-y-6">
+      <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="bg-muted p-4 rounded-lg">
-            <h3 className="font-semibold mb-2 text-center text-sm">
+          <div key={i} className="bg-muted p-4 rounded-lg print:p-0 print:rounded-none print:shadow-none print:break-after-page">
+            <h3 className="font-semibold mb-2 text-center text-sm print:hidden">
               Sheet {i + 1} of {count}
             </h3>
 
@@ -274,7 +329,7 @@ export default function TicketsPage() {
   const [level, setLevel] = useState<Level>("P");
   const [packSize, setPackSize] = useState<PackSize>(24);
   const [generations, setGenerations] = useState(1);
-  const [logo, setLogo] = useState("https://picsum.photos/200/200");
+  const [logo, setLogo] = useState("/logo.svg");
 
   // sequential counters per (level, year)
   const [counters, setCounters] = useState<CounterMap>({});
@@ -303,7 +358,7 @@ export default function TicketsPage() {
 
     // Compute new last used after allocating all sheets
     const totalTickets = generations * packSize;
-    const newLast = ((lastUsed + totalTickets) % 9999) || 9999;
+    const newLast = ((lastUsed + totalTickets -1) % 9999) + 1;
 
     setCounters((prev) => ({ ...prev, [key]: newLast }));
     setSheetStarts(newSheetStarts);
@@ -405,7 +460,17 @@ export default function TicketsPage() {
             <TicketPreview level={level} logoSrc={logo} />
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Logo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LogoUploader logoSrc={logo} onLogoChange={setLogo} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+
+    

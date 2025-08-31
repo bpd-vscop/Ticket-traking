@@ -13,16 +13,16 @@ export const mockTeachers: Teacher[] = [
 ];
 
 export const mockSheets: Sheet[] = [
-  { id: 'sheet-1', level: 'P', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: false, downloads: 2, generationDate: new Date('2024-07-20T10:00:00Z') },
-  { id: 'sheet-2', level: 'P', packSize: 38, startNumber: 25, endNumber: 62, isAssigned: false, downloads: 0, generationDate: new Date('2024-07-21T11:00:00Z') },
-  { id: 'sheet-3', level: 'C', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: false, downloads: 1, generationDate: new Date('2024-07-22T09:30:00Z') },
+  { id: 'sheet-1', level: 'P', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: true, downloads: 2, generationDate: new Date('2024-07-20T10:00:00Z'), familyId: 'family-1' },
+  { id: 'sheet-2', level: 'P', packSize: 38, startNumber: 25, endNumber: 62, isAssigned: true, downloads: 0, generationDate: new Date('2024-07-21T11:00:00Z'), familyId: 'family-1' },
+  { id: 'sheet-3', level: 'C', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: true, downloads: 1, generationDate: new Date('2024-07-22T09:30:00Z'), familyId: 'family-2' },
   { id: 'sheet-4', level: 'L', packSize: 38, startNumber: 1, endNumber: 38, isAssigned: false, downloads: 0, generationDate: new Date() },
 ];
 
 export const mockFamilies: Family[] = [
   {
     id: 'family-1',
-    sheetIds: ['sheet-assigned-1', 'sheet-assigned-2'],
+    sheetIds: ['sheet-1', 'sheet-2'],
     level: 'S',
     parents: { father: 'Marc Dupuis' },
     student: 'Leo Dupuis',
@@ -33,7 +33,7 @@ export const mockFamilies: Family[] = [
   },
    {
     id: 'family-2',
-    sheetIds: ['sheet-assigned-3'],
+    sheetIds: ['sheet-3'],
     level: 'L',
     parents: { mother: 'Sophie Dubois' },
     student: 'Chloe Dubois',
@@ -43,3 +43,5 @@ export const mockFamilies: Family[] = [
     teacherIds: ['teacher-3'],
   },
 ];
+
+    

@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, FileDown, FileText, Image } from "lucide-react";
+import { Download, FileText } from "lucide-react";
 import { mockSheets } from "@/lib/data";
 import { Level, Sheet, levels } from "@/lib/types";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +52,10 @@ const SheetCard = ({
 
   const handleDownload = () => {
     setDownloadCount((prev) => prev + 1);
+    // In a real app, you would trigger a PDF generation flow here.
+    // For now, we just log to the console.
+    console.log("Downloading sheet:", sheet);
+    window.print(); // This will trigger the browser's print dialog
   };
 
   return (
@@ -87,9 +91,6 @@ const SheetCard = ({
           <DropdownMenuContent>
             <DropdownMenuItem onClick={handleDownload}>
               <FileText className="mr-2 h-4 w-4" /> PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDownload}>
-              <Image className="mr-2 h-4 w-4" /> SVG
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -254,3 +255,5 @@ export default function SheetsPage() {
     </div>
   );
 }
+
+    
