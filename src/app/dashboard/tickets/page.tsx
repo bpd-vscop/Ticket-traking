@@ -83,16 +83,16 @@ const LogoUploader = ({
         className="hidden"
         accept="image/*"
       />
-      <div className="relative w-[150px] h-[150px]">
+      <div className="relative w-full h-full">
         <Image
           src={logoSrc}
           alt="Logo"
           layout="fill"
           objectFit="contain"
-          className="opacity-80"
+          className={cn("transition-opacity", isHovered && "opacity-50")}
         />
-        {(isHovered || logoSrc.includes('picsum')) && (
-          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
+        {(isHovered) && (
+          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white rounded-lg">
             <Upload className="h-6 w-6" />
             <span className="text-xs mt-1">Change Logo</span>
           </div>
@@ -123,7 +123,6 @@ const TicketPreview = ({
               width={150}
               height={150}
               objectFit="contain"
-              className="opacity-80"
             />
         </div>
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
@@ -224,8 +223,8 @@ const SheetPreview = ({
   if (count === 0) return null;
 
   return (
-    <DialogContent className="max-w-[95vw] p-4">
-      <DialogHeader>
+    <DialogContent className="max-w-[95vw] p-4 print:max-w-full print:p-0">
+      <DialogHeader className="print:hidden">
         <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
         <DialogCardDescription className="flex justify-between items-center">
          <span>
@@ -241,9 +240,9 @@ const SheetPreview = ({
         </DialogCardDescription>
       </DialogHeader>
 
-      <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0">
+      <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0 print:max-h-full">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="bg-muted p-4 rounded-lg print:p-0 print:rounded-none print:shadow-none print:break-after-page">
+          <div key={i} className="bg-card p-4 rounded-lg print:p-0 print:rounded-none print:shadow-none print:break-after-page">
             <h3 className="font-semibold mb-2 text-center text-sm print:hidden">
               Sheet {i + 1} of {count}
             </h3>
