@@ -41,38 +41,68 @@ import { useToast } from "@/hooks/use-toast";
 const mockSheets = getSheets();
 
 const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
+    /*
+     * HOW TO EDIT THIS SVG LAYOUT
+     * This function generates an SVG string for a sheet of tickets.
+     * You can customize the layout by changing the variables below.
+     *
+     * -- UNITS --
+     * All dimensions are in millimeters (mm), as if for a physical page.
+     *
+     * -- CUSTOMIZATION VARIABLES --
+     * sheetWidth, sheetHeight: The size of the physical paper.
+     * cols, rows: The number of columns and rows in the grid.
+     * ticketWidth, ticketHeight: The size of a single ticket.
+     *
+     * -- TICKET LAYOUT --
+     * The ticket is split into a left (logo) and right (text) part.
+     * - The `image` tag controls the logo's position and size.
+     * - The `text` tag controls the reference number. Its `transform` attribute
+     *   positions and rotates it. `font-size`, `letter-spacing`, etc.,
+     *   control its appearance.
+     */
     const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
     const { packSize, level } = sheet;
 
+    // --- Layout Customization ---
     const ticketWidth = 55; // 5.5cm in mm
-    const sheetWidth = 450; // 45cm in mm
+    const ticketHeight = 55; // 5.5cm in mm
+    const sheetWidth = 450;  // 45cm in mm
     const sheetHeight = 320; // 32cm in mm
     const cols = 8;
-    const rows = 5;
-    
+    // --- End Customization ---
+
     let ticketsSvg = '';
     for (let i = 0; i < packSize; i++) {
         const row = Math.floor(i / cols);
         const col = i % cols;
         const x = col * ticketWidth;
-        const y = row * ticketWidth;
+        const y = row * ticketHeight;
         const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
         const nn = String(serial).padStart(4, "0");
         const code = `${level}-${currentYear}${nn}`;
 
+        // Each ticket is a <g> group element, positioned with a transform.
         ticketsSvg += `
         <g transform="translate(${x}, ${y})">
-            <rect width="${ticketWidth}" height="${ticketWidth}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
-            <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketWidth}" fill="#1f2937" />
-            <image href="${logoSrc}" x="10" y="10" width="${ticketWidth * 0.6}" height="${ticketWidth * 0.6}" opacity="0.6" />
-            <text 
-                transform="translate(${ticketWidth * 0.9}, ${ticketWidth / 2}) rotate(90)" 
-                fill="white" 
+            {/* Dashed border for cutting */}
+            <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
+
+            {/* Right-side dark bar */}
+            <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketHeight}" fill="#1f2937" />
+
+            {/* Logo: Positioned in the left 80% of the ticket. */}
+            <image href="${logoSrc}" x="5" y="5" width="${ticketWidth * 0.7}" height="${ticketHeight * 0.7}" preserveAspectRatio="xMidYMid meet" />
+
+            {/* Vertically rotated reference text */}
+            <text
+                transform="translate(${ticketWidth * 0.9}, ${ticketHeight / 2}) rotate(90)"
+                fill="white"
                 font-family="monospace"
-                font-size="10" 
+                font-size="8"
                 font-weight="bold"
                 text-anchor="middle"
-                letter-spacing="2"
+                letter-spacing="1.5"
             >
                 ${code}
             </text>
@@ -81,11 +111,11 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
     }
 
     return `
-    <svg 
-        width="${sheetWidth}mm" 
-        height="${sheetHeight}mm" 
-        viewBox="0 0 ${sheetWidth} ${sheetHeight}" 
-        xmlns="http://www.w3.org/2000/svg" 
+    <svg
+        width="${sheetWidth}mm"
+        height="${sheetHeight}mm"
+        viewBox="0 0 ${sheetWidth} ${sheetHeight}"
+        xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
     >
         <rect width="100%" height="100%" fill="white" />
