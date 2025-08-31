@@ -26,11 +26,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { mockFamilies, mockTeachers } from "@/lib/data";
+import { getFamilies, getTeachers } from "@/lib/data";
 import { Family, Ticket } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { BookUser, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+
+const mockFamilies = getFamilies();
+const mockTeachers = getTeachers();
 
 const generateTicketsForFamily = (family: Family): Ticket[] => {
     let tickets: Ticket[] = [];

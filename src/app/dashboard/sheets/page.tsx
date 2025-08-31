@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download, FileText } from "lucide-react";
-import { mockSheets } from "@/lib/data";
+import { getSheets } from "@/lib/data";
 import { Level, Sheet, levels } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -37,6 +37,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+
+const mockSheets = getSheets();
 
 const SheetCard = ({
   sheet,

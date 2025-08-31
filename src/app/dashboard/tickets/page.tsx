@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Level, PackSize, levels, packSizes } from "@/lib/types";
+import { Level, PackSize, levels, packSizes, Sheet } from "@/lib/types";
 import { Edit, Sparkles, Upload } from "lucide-react";
 import {
   Dialog,
@@ -33,6 +33,8 @@ import {
 import { CardDescription as DialogCardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
+import { addSheet } from "@/lib/data";
+
 
 /** Fixed grid: 8 cols × 5 rows = 40 slots of 5.5cm */
 const COLS = 8;
@@ -86,11 +88,11 @@ const LogoUploader = ({
           src={logoSrc}
           alt="Logo"
           layout="fill"
-          objectFit="cover"
-          className="rounded-full opacity-80"
+          objectFit="contain"
+          className="opacity-80"
         />
         {(isHovered || logoSrc.includes('picsum')) && (
-          <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center text-white">
+          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
             <Upload className="h-6 w-6" />
             <span className="text-xs mt-1">Change Logo</span>
           </div>
@@ -120,7 +122,8 @@ const TicketPreview = ({
               alt="Logo"
               width={150}
               height={150}
-              className="rounded-full opacity-80"
+              objectFit="contain"
+              className="opacity-80"
             />
         </div>
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
@@ -154,7 +157,8 @@ function TicketCell({
           alt="Logo"
           width={80}
           height={80}
-          className="rounded-full opacity-60"
+          objectFit="contain"
+          className="opacity-60"
         />
       </div>
       <div className="ticket__right">
@@ -345,6 +349,19 @@ export default function TicketsPage() {
     []
   );
 
+  useEffect(() => {
+    // Load logo from local storage on mount
+    const savedLogo = localStorage.getItem('ticketLogo');
+    if (savedLogo) {
+      setLogo(savedLogo);
+    }
+  }, []);
+
+  const handleLogoChange = (newLogo: string) => {
+    setLogo(newLogo);
+    localStorage.setItem('ticketLogo', newLogo);
+  };
+
   const handleGenerate = () => {
     const key = `${level}-${yy}`;
     const lastUsed = counters[key] ?? 0; // 0 => next is 1
@@ -352,8 +369,19 @@ export default function TicketsPage() {
 
     // For N sheets, allocate sequential ranges of packSize each
     for (let s = 0; s < generations; s++) {
-      const startSerial = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
-      newSheetStarts.push(startSerial);
+      const startNumber = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
+      newSheetStarts.push(startNumber);
+       const newSheet: Sheet = {
+        id: `sheet-${Date.now()}-${s}`,
+        level,
+        packSize,
+        startNumber: startNumber,
+        endNumber: startNumber + packSize - 1,
+        isAssigned: false,
+        downloads: 0,
+        generationDate: new Date(),
+      };
+      addSheet(newSheet);
     }
 
     // Compute new last used after allocating all sheets
@@ -366,7 +394,7 @@ export default function TicketsPage() {
 
     toast({
       title: "Sheets Generated",
-      description: `${generations} sheet(s) for ${level}-${yy} (${packSize} tickets each).`,
+      description: `${generations} sheet(s) for ${level}-${yy} (${packSize} tickets each) have been added to the inventory.`,
     });
   };
 
@@ -465,12 +493,10 @@ export default function TicketsPage() {
             <CardTitle>Logo</CardTitle>
           </CardHeader>
           <CardContent>
-            <LogoUploader logoSrc={logo} onLogoChange={setLogo} />
+            <LogoUploader logoSrc={logo} onLogoChange={handleLogoChange} />
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-    

@@ -31,13 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { mockFamilies, mockTeachers } from "@/lib/data";
+import { getFamilies, getTeachers } from "@/lib/data";
 import { Family, Level, Teacher, levels } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { BookUser, User, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const mockFamilies = getFamilies();
+const mockTeachers = getTeachers();
 
 const TeacherAssignmentModal = ({
   family,

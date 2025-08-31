@@ -5,9 +5,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BookUser, LayoutGrid, Users } from "lucide-react";
-import { mockFamilies, mockSheets, mockTeachers } from "@/lib/data";
+import { getFamilies, getSheets, getTeachers } from "@/lib/data";
 
 export default function DashboardPage() {
+  const mockSheets = getSheets();
+  const mockFamilies = getFamilies();
+  const mockTeachers = getTeachers();
+  
   const unassignedSheets = mockSheets.filter(s => !s.isAssigned).length;
   const activeFamilies = mockFamilies.length;
   const totalTeachers = mockTeachers.length;

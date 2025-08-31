@@ -35,9 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { mockUsers } from "@/lib/data";
+import { getUsers } from "@/lib/data";
 import { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+
+const mockUsers = getUsers();
 
 const UserModal = ({
   user,
