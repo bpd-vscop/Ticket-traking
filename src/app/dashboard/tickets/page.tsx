@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
@@ -33,14 +34,16 @@ import {
 import { CardDescription as DialogCardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { addSheet } from "@/lib/data";
-
+import { addSheet, getSheets } from "@/lib/data";
 
 /** Fixed grid: 8 cols × 5 rows = 40 slots of 5.5cm */
 const COLS = 8;
 const ROWS = 5;
 const CAPACITY = COLS * ROWS; // 40
 
+/* ============================================================================
+   SVG generator
+   ========================================================================== */
 const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
     /*
      * HOW TO EDIT THIS SVG LAYOUT
@@ -66,10 +69,10 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
     const { packSize, level } = sheet;
 
     // --- Layout Customization ---
-    const ticketWidth = 55; // 5.5cm in mm
-    const ticketHeight = 55; // 5.5cm in mm
-    const sheetWidth = 450;  // 45cm in mm
-    const sheetHeight = 320; // 32cm in mm
+    const ticketWidth = 55;
+    const ticketHeight = 55;
+    const sheetWidth = 450;
+    const sheetHeight = 320;
     const cols = 8;
     // --- End Customization ---
 
@@ -83,6 +86,11 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
         const nn = String(serial).padStart(4, "0");
         const code = `${level}-${currentYear}${nn}`;
 
+        const barX = ticketWidth * 0.8;
+        const barW = ticketWidth * 0.2;
+        const cx = barX + barW / 2;
+        const cy = ticketHeight / 2;
+
         // Each ticket is a <g> group element, positioned with a transform.
         ticketsSvg += `
         <g transform="translate(${x}, ${y})">
@@ -90,21 +98,24 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
             <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
 
             {/* Right-side dark bar */}
-            <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketHeight}" fill="#1f2937" />
+            <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
 
             {/* Logo: Positioned in the left 80% of the ticket. */}
             <image href="${logoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
 
             {/* Vertically rotated reference text */}
             <text
-                transform="translate(${ticketWidth * 0.9}, ${ticketHeight / 2}) rotate(90) translate(0, ${code.length * -3.5}) rotate(180)"
+                x="${cx}"
+                y="${cy}"
+                transform="rotate(180 ${cx} ${cy})"
                 fill="white"
-                font-family="monospace"
+                font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
                 font-size="8"
                 font-weight="bold"
                 text-anchor="middle"
+                dominant-baseline="middle"
                 letter-spacing="1.5"
-                writing-mode="vertical-rl"
+                style="writing-mode: vertical-rl;"
             >
                 ${code}
             </text>
@@ -170,14 +181,16 @@ const LogoUploader = ({
         accept="image/*"
       />
       <div className="relative w-full h-full">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={logoSrc}
           alt="Logo"
-          layout="fill"
-          objectFit="contain"
-          className={cn("transition-opacity", isHovered && "opacity-50")}
+          className={cn(
+            "w-full h-full object-contain transition-opacity",
+            isHovered && "opacity-50"
+          )}
         />
-        {(isHovered) && (
+        {isHovered && (
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white rounded-lg">
             <Upload className="h-6 w-6" />
             <span className="text-xs mt-1">Change Logo</span>
@@ -187,7 +200,6 @@ const LogoUploader = ({
     </div>
   );
 };
-
 
 /* ------------------------------ Ticket Preview ----------------------------- */
 const TicketPreview = ({
@@ -203,16 +215,11 @@ const TicketPreview = ({
     <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
       <div className="w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]">
         <div className="relative flex items-center justify-center p-4">
-           <Image
-              src={logoSrc}
-              alt="Logo"
-              width={150}
-              height={150}
-              objectFit="contain"
-            />
+          <img src={logoSrc} alt="Logo" className="w-full h-full object-contain" />
         </div>
+        {/* Right bar: center + 180° rotation */}
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
-          <p className="text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180">
+          <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
             {level}-{currentYear}XXX
           </p>
         </div>
@@ -237,18 +244,17 @@ function TicketCell({
   return (
     <div className="ticket">
       <div className="ticket__left">
-        <Image
+        <img
           src={logoSrc}
           alt="Logo"
-          width={80}
-          height={80}
-          objectFit="contain"
-          className="opacity-60"
+          className="w-full h-full object-contain opacity-60"
         />
       </div>
-      <div className="ticket__right">
-        {/* Keep same scale as the single TicketPreview */}
-        <span className="ticket__code">{code}</span>
+      {/* Ensure centered text + 180° rotation inside the bar */}
+      <div className="ticket__right flex items-center justify-center">
+        <span className="ticket__code m-0 leading-none font-mono font-bold [writing-mode:vertical-rl] rotate-180 origin-center tracking-wider">
+          {code}
+        </span>
       </div>
     </div>
   );
@@ -304,7 +310,7 @@ const SheetPreview = ({
 
   const handlePrint = () => {
     window.print();
-  }
+  };
 
   if (count === 0) return null;
 
@@ -313,7 +319,7 @@ const SheetPreview = ({
       <DialogHeader className="print:hidden">
         <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
         <DialogCardDescription className="flex justify-between items-center">
-         <span>
+          <span>
             Prints at 45×32&nbsp;cm, 8×5 slots (5.5&nbsp;cm). Pack {packSize}:{" "}
             {packSize === 24
               ? "rows 4 & 5 empty"
@@ -321,14 +327,19 @@ const SheetPreview = ({
               ? "last 2 cells empty"
               : `first ${packSize} filled, remaining blank`}
             .
-         </span>
-         <Button onClick={handlePrint} className="print:hidden">Print</Button>
+          </span>
+          <Button onClick={handlePrint} className="print:hidden">
+            Print
+          </Button>
         </DialogCardDescription>
       </DialogHeader>
 
       <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0 print:max-h-full">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="bg-card p-4 rounded-lg print:p-0 print:rounded-none print:shadow-none print:break-after-page">
+          <div
+            key={i}
+            className="bg-card p-4 rounded-lg print:p-0 print:rounded-none print:shadow-none print:break-after-page"
+          >
             <h3 className="font-semibold mb-2 text-center text-sm print:hidden">
               Sheet {i + 1} of {count}
             </h3>
@@ -436,15 +447,28 @@ export default function TicketsPage() {
 
   useEffect(() => {
     // Load logo from local storage on mount
-    const savedLogo = localStorage.getItem('ticketLogo');
+    const savedLogo = localStorage.getItem("ticketLogo");
     if (savedLogo) {
       setLogo(savedLogo);
     }
+    // This is a simplified way to sync counters. 
+    // In a real app, this would come from a database.
+    const sheets = getSheets();
+    const latestCounters: CounterMap = {};
+    sheets.forEach(sheet => {
+        const key = `${sheet.level}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
+        const endNumber = sheet.endNumber;
+        if (!latestCounters[key] || endNumber > latestCounters[key]) {
+            latestCounters[key] = endNumber;
+        }
+    });
+    setCounters(latestCounters);
+
   }, []);
 
   const handleLogoChange = (newLogo: string) => {
     setLogo(newLogo);
-    localStorage.setItem('ticketLogo', newLogo);
+    localStorage.setItem("ticketLogo", newLogo);
   };
 
   const handleGenerate = () => {
@@ -456,7 +480,7 @@ export default function TicketsPage() {
     for (let s = 0; s < generations; s++) {
       const startNumber = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
       newSheetStarts.push(startNumber);
-       const newSheet: Sheet = {
+      const newSheet: Sheet = {
         id: `sheet-${Date.now()}-${s}`,
         level,
         packSize,
@@ -471,7 +495,7 @@ export default function TicketsPage() {
 
     // Compute new last used after allocating all sheets
     const totalTickets = generations * packSize;
-    const newLast = ((lastUsed + totalTickets -1) % 9999) + 1;
+    const newLast = (lastUsed + totalTickets);
 
     setCounters((prev) => ({ ...prev, [key]: newLast }));
     setSheetStarts(newSheetStarts);

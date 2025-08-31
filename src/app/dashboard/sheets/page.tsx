@@ -1,3 +1,4 @@
+
 "use client";
 import { useState } from "react";
 import {
@@ -38,8 +39,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const mockSheets = getSheets();
-
 const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
     /*
      * HOW TO EDIT THIS SVG LAYOUT
@@ -65,10 +64,10 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
     const { packSize, level } = sheet;
 
     // --- Layout Customization ---
-    const ticketWidth = 55; // 5.5cm in mm
-    const ticketHeight = 55; // 5.5cm in mm
-    const sheetWidth = 450;  // 45cm in mm
-    const sheetHeight = 320; // 32cm in mm
+    const ticketWidth = 55;
+    const ticketHeight = 55;
+    const sheetWidth = 450;
+    const sheetHeight = 320;
     const cols = 8;
     // --- End Customization ---
 
@@ -82,6 +81,11 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
         const nn = String(serial).padStart(4, "0");
         const code = `${level}-${currentYear}${nn}`;
 
+        const barX = ticketWidth * 0.8;
+        const barW = ticketWidth * 0.2;
+        const cx = barX + barW / 2;
+        const cy = ticketHeight / 2;
+
         // Each ticket is a <g> group element, positioned with a transform.
         ticketsSvg += `
         <g transform="translate(${x}, ${y})">
@@ -89,20 +93,24 @@ const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
             <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
 
             {/* Right-side dark bar */}
-            <rect x="${ticketWidth * 0.8}" y="0" width="${ticketWidth * 0.2}" height="${ticketHeight}" fill="#1f2937" />
+            <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
 
             {/* Logo: Positioned in the left 80% of the ticket. */}
             <image href="${logoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
 
             {/* Vertically rotated reference text */}
             <text
-                transform="translate(${ticketWidth * 0.9}, ${ticketHeight / 2}) rotate(90)"
+                x="${cx}"
+                y="${cy}"
+                transform="rotate(180 ${cx} ${cy})"
                 fill="white"
-                font-family="monospace"
+                font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
                 font-size="8"
                 font-weight="bold"
                 text-anchor="middle"
+                dominant-baseline="middle"
                 letter-spacing="1.5"
+                style="writing-mode: vertical-rl;"
             >
                 ${code}
             </text>
@@ -135,7 +143,7 @@ const SheetCard = ({
   onSelect: (id: string, checked: boolean) => void;
 }) => {
   const [downloadCount, setDownloadCount] = useState(sheet.downloads);
-  const currentYear = new Date().getFullYear().toString().slice(-2);
+  const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
 
   const handleDownload = () => {
     const logoSrc = localStorage.getItem('ticketLogo') || '/logo.svg';
@@ -158,7 +166,7 @@ const SheetCard = ({
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="font-mono">
-              {sheet.level}-{currentYear}{String(sheet.startNumber).padStart(3, '0')} to {sheet.level}-{currentYear}{String(sheet.endNumber).padStart(3, '0')}
+              {sheet.level}-{currentYear}{String(sheet.startNumber).padStart(4, '0')} to {sheet.level}-{currentYear}{String(sheet.endNumber).padStart(4, '0')}
             </CardTitle>
             <CardDescription>{sheet.packSize} tickets</CardDescription>
           </div>
@@ -291,7 +299,10 @@ export default function SheetsPage() {
   };
   
   const handleAssign = () => {
-    setSheets(prev => prev.filter(s => !selectedSheets.includes(s.id)));
+    // This is a mock. In a real app, you'd update the backend.
+    const assignedSheetIds = new Set(selectedSheets);
+    setSheets(prev => prev.filter(s => !assignedSheetIds.has(s.id)));
+    // Here you would also update the global state/DB to mark sheets as assigned.
     setSelectedSheets([]);
   }
 
@@ -343,14 +354,9 @@ export default function SheetsPage() {
       <AssignmentModal 
         isOpen={isModalOpen}
         setIsOpen={setIsModalOpen}
-        sheets={sheets.filter(s => selectedSheets.includes(s.id))}
+        sheets={getSheets().filter(s => selectedSheets.includes(s.id))}
         onAssign={handleAssign}
       />
     </div>
   );
 }
-
-    
-
-    
-
