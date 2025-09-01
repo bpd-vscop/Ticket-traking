@@ -69,9 +69,9 @@
 /* =================== REAL-SIZE / PREVIEW UTILITIES =================== */
 @layer utilities {
   /* Exact sheet size in physical units (if you want a fixed-size element) */
-  .sheet-45x32 {
-    width: 45cm;
-    height: 32cm;
+  .sheet-297x420 {
+    width: 29.7cm;
+    height: 42cm;
     box-sizing: border-box;
   }
 
@@ -80,10 +80,10 @@
     flex: 0 0 auto;
   }
 
-  /* Scaled on-screen preview that keeps 45:32 ratio */
+  /* Scaled on-screen preview that keeps A3 ratio */
   .sheet-viewport {
-    width: min(100%, 1100px);
-    aspect-ratio: 45 / 32;
+    width: min(100%, 800px);
+    aspect-ratio: 297 / 420;
     background: white;
     border: 1px solid hsl(var(--border));
     box-shadow: 0 1px 6px rgba(0,0,0,.06);
@@ -93,15 +93,17 @@
 
   /* Inner padding.
      For the preview we use UNIFORM margins (same top/bottom & left/right).
-     0.5cm / 45cm = 1.111111% on both axes. */
+     0.5cm / 29.7cm = 1.6835% on x-axis. 0.5cm / 42cm = 1.19% on y-axis
+  */
   .sheet-inner {
     width: 100%;
     height: 100%;
-    padding: 7.03125% 1.111111%; /* default kept for reference; overridden by .sheet-inner--even */
+    padding: 1.19% 1.6835%;
     box-sizing: border-box;
   }
+
   .sheet-inner--even {
-    padding: 1.111111% !important; /* equal preview margins T/B = L/R */
+      padding: 1.5% !important;
   }
 
   /* Wrap that centers the grid inside the inner area */
@@ -113,14 +115,14 @@
   }
 
   /* Grid that scales on screen with square cells.
-     aspect-ratio: 8/5 makes rows match columns to keep tickets square. */
+     A3 paper with 4x4cm tickets = 7x10 grid. aspect-ratio: 7/10 */
   .grid-sheet {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: repeat(5, 1fr);
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(10, 1fr);
     gap: 0;
     width: 100%;
-    aspect-ratio: 8 / 5; /* keep squares in preview */
+    aspect-ratio: 7 / 10;
     margin: 0 auto;
   }
 
@@ -166,12 +168,12 @@
 
   /* Vertical code tuned to fit bar without clipping */
   .ticket__code {
-    font-weight: 800;
-    letter-spacing: .2em;
+    font-weight: 700;
+    letter-spacing: .15em;
     writing-mode: vertical-rl;
-    transform: rotate(180deg) scale(.33);
+    transform: rotate(180deg) scale(.4);
     line-height: 1;
-    font-size: 3rem; /* tailwind text-5xl equivalent */
+    font-size: 1.5rem; /* ~text-2xl */
     white-space: nowrap;
   }
 }
@@ -179,13 +181,13 @@
 /* ============================ PRINT RULES ============================ */
 @media print {
   @page {
-    size: 45cm 32cm;
+    size: 29.7cm 42cm;
     margin: 0;
   }
 
   .sheet-viewport {
-    width: 45cm !important;
-    height: 32cm !important;
+    width: 29.7cm !important;
+    height: 42cm !important;
     aspect-ratio: auto;
     border: none;
     box-shadow: none;
@@ -196,17 +198,17 @@
     padding: 0.5cm !important;
   }
 
-  /* Force exact 5.5cm cells for print */
+  /* Force exact 4cm cells for print */
   .grid-sheet {
-    grid-template-columns: repeat(8, 5.5cm) !important;
-    grid-template-rows: repeat(5, 5.5cm) !important;
+    grid-template-columns: repeat(7, 4cm) !important;
+    grid-template-rows: repeat(10, 4cm) !important;
     width: auto !important;
     aspect-ratio: auto !important;
   }
 
   .ticket {
-    width: 5.5cm !important;
-    height: 5.5cm !important;
+    width: 4cm !important;
+    height: 4cm !important;
   }
 
   img, svg, canvas {

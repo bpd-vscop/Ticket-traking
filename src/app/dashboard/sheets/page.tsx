@@ -1,4 +1,3 @@
-
 "use client";
 import { useState } from "react";
 import {
@@ -39,110 +38,111 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
-    /*
-     * HOW TO EDIT THIS SVG LAYOUT
-     * This function generates an SVG string for a sheet of tickets.
-     * You can customize the layout by changing the variables below.
-     *
-     * -- UNITS --
-     * All dimensions are in millimeters (mm), as if for a physical page.
-     *
-     * -- CUSTOMIZATION VARIABLES --
-     * sheetWidth, sheetHeight: The size of the physical paper.
-     * cols, rows: The number of columns and rows in the grid.
-     * ticketWidth, ticketHeight: The size of a single ticket.
-     *
-     * -- TICKET LAYOUT --
-     * The ticket is split into a left (logo) and right (text) part.
-     * - The `image` tag controls the logo's position and size.
-     * - The `text` tag controls the reference number. Its `transform` attribute
-     *   positions and rotates it. `font-size`, `letter-spacing`, etc.,
-     *   control its appearance.
-     */
-    const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
-    const { packSize, level } = sheet;
+/** Helper: load /public/logo.svg and return as data-URI so it stays inside the downloaded SVG */
+async function getPublicLogoDataUri(): Promise<string> {
+  try {
+    const res = await fetch("/logo.svg", { cache: "no-cache" });
+    const svg = await res.text();
+    // Encode safely for data URI
+    const encoded = encodeURIComponent(svg)
+      .replace(/'/g, "%27")
+      .replace(/"/g, "%22");
+    return `data:image/svg+xml;utf8,${encoded}`;
+  } catch {
+    // Fallback (note: external href may break when viewing the downloaded file offline)
+    return "/logo.svg";
+  }
+}
 
-    // --- Layout Customization ---
-    const ticketWidth = 55;
-    const ticketHeight = 55;
-    const sheetWidth = 450;
-    const sheetHeight = 320;
-    const cols = 8;
-    // --- End Customization ---
+const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: string): string => {
+  /*
+   * This function generates an SVG string for a sheet of tickets.
+   * Units are millimeters (mm). A3 is 297x420mm.
+   */
+  const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+  const { packSize, level } = sheet;
 
-    let ticketsSvg = '';
-    for (let i = 0; i < packSize; i++) {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        const x = col * ticketWidth;
-        const y = row * ticketHeight;
-        const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
-        const nn = String(serial).padStart(4, "0");
-        const code = `${level}-${currentYear}${nn}`;
+  // --- Layout Customization ---
+  const ticketWidth = 40;
+  const ticketHeight = 40;
+  const sheetWidth = 297; // A3 width
+  const sheetHeight = 420; // A3 height
+  const cols = Math.floor(sheetWidth / ticketWidth); // 7 cols
+  // --- End Customization ---
 
-        const barX = ticketWidth * 0.8;
-        const barW = ticketWidth * 0.2;
-        const cx = barX + barW / 2;
-        const cy = ticketHeight / 2;
+  let ticketsSvg = '';
+  for (let i = 0; i < packSize; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const x = col * ticketWidth;
+    const y = row * ticketHeight;
+    const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
+    const nn = String(serial).padStart(4, "0");
+    const code = `${level}-${currentYear}${nn}`;
 
-        // Each ticket is a <g> group element, positioned with a transform.
-        ticketsSvg += `
-        <g transform="translate(${x}, ${y})">
-            {/* Dashed border for cutting */}
-            <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
+    const barX = ticketWidth * 0.8;
+    const barW = ticketWidth * 0.2;
+    const cx = barX + barW / 2;
+    const cy = ticketHeight / 2;
 
-            {/* Right-side dark bar */}
-            <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
+    // Each ticket is a <g> group element, positioned with a transform.
+    ticketsSvg += `
+      <g transform="translate(${x}, ${y})">
+        <!-- Dashed border for cutting -->
+        <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
 
-            {/* Logo: Positioned in the left 80% of the ticket. */}
-            <image href="${logoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
+        <!-- Right-side dark bar -->
+        <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
 
-            {/* Vertically rotated reference text */}
-            <text
-                x="${cx}"
-                y="${cy}"
-                transform="rotate(180 ${cx} ${cy})"
-                fill="white"
-                font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-                font-size="8"
-                font-weight="bold"
-                text-anchor="middle"
-                dominant-baseline="central"
-                letter-spacing="1.5"
-                style="writing-mode: vertical-rl;"
-            >
-                ${code}
-            </text>
-        </g>
-        `;
-    }
+        <!-- Logo: Positioned in the left 80% of the ticket. -->
+        <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
 
-    const watermarkTile = 75.5; // in mm, approx 2cm
-    const watermarkStepY = watermarkTile * 0.866; // sqrt(3)/2
-
-    return `
-    <svg
-        width="${sheetWidth}mm"
-        height="${sheetHeight}mm"
-        viewBox="0 0 ${sheetWidth} ${sheetHeight}"
-        xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-    >
-        <defs>
-            <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-                <image href="${logoSrc}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
-            </pattern>
-             <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-                <image href="${logoSrc}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
-            </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="white" />
-        <rect width="100%" height="100%" fill="url(#watermark)" />
-        <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
-        ${ticketsSvg}
-    </svg>
+        <!-- Vertically rotated reference text -->
+        <text
+          x="${cx}"
+          y="${cy}"
+          transform="rotate(180 ${cx} ${cy})"
+          fill="white"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+          font-size="6"
+          font-weight="bold"
+          text-anchor="middle"
+          dominant-baseline="central"
+          letter-spacing="1"
+          style="writing-mode: vertical-rl;"
+        >
+          ${code}
+        </text>
+      </g>
     `;
+  }
+
+  // Watermark hex tiling
+  const watermarkTile = 75.5; // mm
+  const watermarkStepY = watermarkTile * 0.866; // sqrt(3)/2
+
+  return `
+    <svg
+      width="${sheetWidth}mm"
+      height="${sheetHeight}mm"
+      viewBox="0 0 ${sheetWidth} ${sheetHeight}"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+    >
+      <defs>
+        <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <image href="${watermarkHref}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+        </pattern>
+        <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <image href="${watermarkHref}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="white" />
+      <rect width="100%" height="100%" fill="url(#watermark)" />
+      <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
+      ${ticketsSvg}
+    </svg>
+  `;
 };
 
 
@@ -158,12 +158,15 @@ const SheetCard = ({
   const [downloadCount, setDownloadCount] = useState(sheet.downloads);
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
 
-  const handleDownload = () => {
-    const logoSrc = localStorage.getItem('ticketLogo') || '/logo.svg';
-    const svgContent = generateSheetSvg(sheet, logoSrc);
-    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+  const handleDownload = async () => {
+    // Ticket left-side logo can be user-chosen, but watermark must be the public /logo.svg
+    const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
+    const watermarkHref = await getPublicLogoDataUri();
+
+    const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
+    const blob = new Blob([svgContent], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `sheet-${sheet.level}-${sheet.startNumber}.svg`;
     document.body.appendChild(a);
@@ -191,8 +194,8 @@ const SheetCard = ({
         </div>
       </CardHeader>
       <CardContent>
-         <p className="text-sm text-muted-foreground">
-            Generated {formatDistanceToNow(sheet.generationDate, { addSuffix: true })}
+        <p className="text-sm text-muted-foreground">
+          Generated {formatDistanceToNow(sheet.generationDate, { addSuffix: true })}
         </p>
       </CardContent>
       <CardFooter>
@@ -225,75 +228,75 @@ const AssignmentModal = ({
   sheets: Sheet[];
   onAssign: () => void;
 }) => {
-    const { toast } = useToast();
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        toast({
-            title: "Sheets Assigned",
-            description: `${sheets.length} sheet(s) have been assigned to a new family.`
-        });
-        onAssign();
-        setIsOpen(false);
-    }
+  const { toast } = useToast();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Sheets Assigned",
+      description: `${sheets.length} sheet(s) have been assigned to a new family.`
+    });
+    onAssign();
+    setIsOpen(false);
+  };
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[625px]">
         <form onSubmit={handleSubmit}>
-            <DialogHeader>
+          <DialogHeader>
             <DialogTitle>Assign Sheets to Family</DialogTitle>
             <DialogDescription>
-                You are assigning {sheets.length} sheet(s). Fill in the family details below.
+              You are assigning {sheets.length} sheet(s). Fill in the family details below.
             </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="parent1">Parent Name 1</Label>
-                        <Input id="parent1" placeholder="e.g., John Doe" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="parent2">Parent Name 2</Label>
-                        <Input id="parent2" placeholder="e.g., Jane Doe" />
-                    </div>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="student">Student Name</Label>
-                    <Input id="student" placeholder="e.g., Junior Doe" required />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Subjects & Weekly Hours</Label>
-                    <div className="flex gap-2">
-                        <Input placeholder="e.g., Math" className="w-2/3" required/>
-                        <Input type="number" placeholder="Hours" className="w-1/3" required/>
-                    </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="hourly-rate">Hourly Rate (€)</Label>
-                        <Input id="hourly-rate" type="number" placeholder="40" required />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="reduction">Reduction (€)</Label>
-                        <Input id="reduction" type="number" placeholder="0" />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="total">Total (€)</Label>
-                        <Input id="total" type="number" placeholder="Calculated..." readOnly />
-                    </div>
-                </div>
-                <div>
-                     <Label>Payment</Label>
-                     <div className="grid grid-cols-3 gap-2 mt-2">
-                        <Input type="number" placeholder="Cash" />
-                        <Input type="number" placeholder="Cheque" />
-                        <Input type="number" placeholder="Card" />
-                    </div>
-                </div>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="parent1">Parent Name 1</Label>
+                <Input id="parent1" placeholder="e.g., John Doe" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="parent2">Parent Name 2</Label>
+                <Input id="parent2" placeholder="e.g., Jane Doe" />
+              </div>
             </div>
-            <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit">Assign</Button>
-            </DialogFooter>
+            <div className="space-y-2">
+              <Label htmlFor="student">Student Name</Label>
+              <Input id="student" placeholder="e.g., Junior Doe" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Subjects & Weekly Hours</Label>
+              <div className="flex gap-2">
+                <Input placeholder="e.g., Math" className="w-2/3" required />
+                <Input type="number" placeholder="Hours" className="w-1/3" required />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hourly-rate">Hourly Rate (€)</Label>
+                <Input id="hourly-rate" type="number" placeholder="40" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reduction">Reduction (€)</Label>
+                <Input id="reduction" type="number" placeholder="0" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="total">Total (€)</Label>
+                <Input id="total" type="number" placeholder="Calculated..." readOnly />
+              </div>
+            </div>
+            <div>
+              <Label>Payment</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <Input type="number" placeholder="Cash" />
+                <Input type="number" placeholder="Cheque" />
+                <Input type="number" placeholder="Card" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button type="submit">Assign</Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -310,29 +313,27 @@ export default function SheetsPage() {
       checked ? [...prev, id] : prev.filter((sheetId) => sheetId !== id)
     );
   };
-  
+
   const handleAssign = () => {
-    // This is a mock. In a real app, you'd update the backend.
     const assignedSheetIds = new Set(selectedSheets);
     setSheets(prev => prev.filter(s => !assignedSheetIds.has(s.id)));
-    // Here you would also update the global state/DB to mark sheets as assigned.
     setSelectedSheets([]);
-  }
+  };
 
   const sheetsByLevel = (level: Level) =>
     sheets.filter((sheet) => sheet.level === level);
 
   return (
     <div className="space-y-4">
-        <div className="flex justify-between items-center">
-             <h1 className="text-2xl font-bold">Sheet Inventory</h1>
-            <Button 
-                onClick={() => setIsModalOpen(true)}
-                disabled={selectedSheets.length === 0}
-            >
-                Assign Selected ({selectedSheets.length})
-            </Button>
-        </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Sheet Inventory</h1>
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          disabled={selectedSheets.length === 0}
+        >
+          Assign Selected ({selectedSheets.length})
+        </Button>
+      </div>
       <Tabs defaultValue="P">
         <TabsList>
           {levels.map((level) => (
@@ -355,16 +356,16 @@ export default function SheetsPage() {
                 ))}
               </div>
             ) : (
-                <Card className="mt-4">
-                    <CardContent className="pt-6">
-                        <p className="text-center text-muted-foreground">No unassigned sheets for this level.</p>
-                    </CardContent>
-                </Card>
+              <Card className="mt-4">
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">No unassigned sheets for this level.</p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         ))}
       </Tabs>
-      <AssignmentModal 
+      <AssignmentModal
         isOpen={isModalOpen}
         setIsOpen={setIsModalOpen}
         sheets={getSheets().filter(s => selectedSheets.includes(s.id))}

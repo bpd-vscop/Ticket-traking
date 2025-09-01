@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
@@ -36,120 +35,98 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { addSheet, getSheets } from "@/lib/data";
 
-/** Fixed grid: 8 cols × 5 rows = 40 slots of 5.5cm */
-const COLS = 8;
-const ROWS = 5;
-const CAPACITY = COLS * ROWS; // 40
+/** Fixed grid: 7 cols × 10 rows on A3 paper */
+const COLS = 7;
+const ROWS = 10;
+const CAPACITY = COLS * ROWS; // 70
 
 /* ============================================================================
-   SVG generator
+   SVG generator (kept here for parity; if you later add a "Download as SVG"
+   from this page too, it will already use public/logo.svg for watermark).
    ========================================================================== */
-const generateSheetSvg = (sheet: Sheet, logoSrc: string): string => {
-    /*
-     * HOW TO EDIT THIS SVG LAYOUT
-     * This function generates an SVG string for a sheet of tickets.
-     * You can customize the layout by changing the variables below.
-     *
-     * -- UNITS --
-     * All dimensions are in millimeters (mm), as if for a physical page.
-     *
-     * -- CUSTOMIZATION VARIABLES --
-     * sheetWidth, sheetHeight: The size of the physical paper.
-     * cols, rows: The number of columns and rows in the grid.
-     * ticketWidth, ticketHeight: The size of a single ticket.
-     *
-     * -- TICKET LAYOUT --
-     * The ticket is split into a left (logo) and right (text) part.
-     * - The `image` tag controls the logo's position and size.
-     * - The `text` tag controls the reference number. Its `transform` attribute
-     *   positions and rotates it. `font-size`, `letter-spacing`, etc.,
-     *   control its appearance.
-     */
-    const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
-    const { packSize, level } = sheet;
+const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: string): string => {
+  const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+  const { packSize, level } = sheet;
 
-    // --- Layout Customization ---
-    const ticketWidth = 55;
-    const ticketHeight = 55;
-    const sheetWidth = 450;
-    const sheetHeight = 320;
-    const cols = 8;
-    // --- End Customization ---
+  // --- Layout ---
+  const ticketWidth = 40;
+  const ticketHeight = 40;
+  const sheetWidth = 297; // A3 width
+  const sheetHeight = 420; // A3 height
+  const cols = Math.floor(sheetWidth / ticketWidth); // 7
 
-    let ticketsSvg = '';
-    for (let i = 0; i < packSize; i++) {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        const x = col * ticketWidth;
-        const y = row * ticketHeight;
-        const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
-        const nn = String(serial).padStart(4, "0");
-        const code = `${level}-${currentYear}${nn}`;
+  let ticketsSvg = "";
+  for (let i = 0; i < packSize; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const x = col * ticketWidth;
+    const y = row * ticketHeight;
+    const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
+    const nn = String(serial).padStart(4, "0");
+    const code = `${level}-${currentYear}${nn}`;
 
-        const barX = ticketWidth * 0.8;
-        const barW = ticketWidth * 0.2;
-        const cx = barX + barW / 2;
-        const cy = ticketHeight / 2;
+    const barX = ticketWidth * 0.8;
+    const barW = ticketWidth * 0.2;
+    const cx = barX + barW / 2;
+    const cy = ticketHeight / 2;
 
-        // Each ticket is a <g> group element, positioned with a transform.
-        ticketsSvg += `
-        <g transform="translate(${x}, ${y})">
-            {/* Dashed border for cutting */}
-            <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
+    ticketsSvg += `
+      <g transform="translate(${x}, ${y})">
+        <!-- Dashed border for cutting -->
+        <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
 
-            {/* Right-side dark bar */}
-            <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
+        <!-- Right-side dark bar -->
+        <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
 
-            {/* Logo: Positioned in the left 80% of the ticket. */}
-            <image href="${logoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
+        <!-- Logo: left 80% -->
+        <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
 
-            {/* Vertically rotated reference text */}
-            <text
-                x="${cx}"
-                y="${cy}"
-                transform="rotate(180 ${cx} ${cy})"
-                fill="white"
-                font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-                font-size="8"
-                font-weight="bold"
-                text-anchor="middle"
-                dominant-baseline="central"
-                letter-spacing="1.5"
-                style="writing-mode: vertical-rl;"
-            >
-                ${code}
-            </text>
-        </g>
-        `;
-    }
-
-    const watermarkTile = 75.5; // in mm, approx 2cm
-    const watermarkStepY = watermarkTile * 0.866; // sqrt(3)/2
-
-    return `
-    <svg
-        width="${sheetWidth}mm"
-        height="${sheetHeight}mm"
-        viewBox="0 0 ${sheetWidth} ${sheetHeight}"
-        xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-    >
-        <defs>
-            <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-                <image href="${logoSrc}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
-            </pattern>
-             <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-                <image href="${logoSrc}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
-            </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="white" />
-        <rect width="100%" height="100%" fill="url(#watermark)" />
-        <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
-        ${ticketsSvg}
-    </svg>
+        <!-- Vertically rotated reference text -->
+        <text
+          x="${cx}"
+          y="${cy}"
+          transform="rotate(180 ${cx} ${cy})"
+          fill="white"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+          font-size="6"
+          font-weight="bold"
+          text-anchor="middle"
+          dominant-baseline="central"
+          letter-spacing="1"
+          style="writing-mode: vertical-rl;"
+        >
+          ${code}
+        </text>
+      </g>
     `;
-};
+  }
 
+  const watermarkTile = 75.5; // mm
+  const watermarkStepY = watermarkTile * 0.866;
+
+  return `
+    <svg
+      width="${sheetWidth}mm"
+      height="${sheetHeight}mm"
+      viewBox="0 0 ${sheetWidth} ${sheetHeight}"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+    >
+      <defs>
+        <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <image href="${watermarkHref}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+        </pattern>
+        <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <image href="${watermarkHref}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="white" />
+      <rect width="100%" height="100%" fill="url(#watermark)" />
+      <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
+      ${ticketsSvg}
+    </svg>
+  `;
+};
 
 /* ------------------------------ Logo Uploader ----------------------------- */
 const LogoUploader = ({
@@ -232,7 +209,7 @@ const TicketPreview = ({
         </div>
         {/* Right bar: center + 180° rotation */}
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
-          <p className="m-0 leading-none text-5xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
+          <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
             {level}-{currentYear}XXX
           </p>
         </div>
@@ -282,7 +259,7 @@ const SheetPreview = ({
   sheetStarts,
 }: {
   level: Level;
-  packSize: PackSize; // 24 or 38 (<=40)
+  packSize: PackSize; // 24 or 38 (<=70)
   count: number;
   logoSrc: string;
   sheetStarts: number[]; // starting serial (1..9999) per sheet
@@ -293,14 +270,12 @@ const SheetPreview = ({
     const startSerial = sheetStarts[sheetIdx]; // 1..9999
     const codes: string[] = [];
 
-    // Produce exactly packSize codes for this sheet, sequential with wrap at 9999
     for (let k = 0; k < packSize; k++) {
-      const serial = ((startSerial - 1 + k) % 9999) + 1; // 1..9999
-      const nn = String(serial).padStart(4, "0"); // 0001..9999
+      const serial = ((startSerial - 1 + k) % 9999) + 1;
+      const nn = String(serial).padStart(4, "0");
       codes.push(`${level}-${currentYear}${nn}`);
     }
 
-    // Fill to 40 cells (blanks at the end)
     const cells = Array.from({ length: CAPACITY }).map((_, i) => {
       const code = i < packSize ? codes[i] : "";
       return (
@@ -313,7 +288,6 @@ const SheetPreview = ({
       );
     });
 
-    // Grid sits above the watermark
     return (
       <div className="sheet-grid-wrap">
         <div className="grid-sheet relative z-10">{cells}</div>
@@ -328,18 +302,12 @@ const SheetPreview = ({
   if (count === 0) return null;
 
   return (
-    <DialogContent className="max-w-[95vw] p-4 print:max-w-full print:p-0">
+    <DialogContent className="max-w-[95vw] p-4 print:max-w/full print:p-0">
       <DialogHeader className="print:hidden">
         <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
         <DialogCardDescription className="flex justify-between items-center">
           <span>
-            Prints at 45×32&nbsp;cm, 8×5 slots (5.5&nbsp;cm). Pack {packSize}:{" "}
-            {packSize === 24
-              ? "rows 4 & 5 empty"
-              : packSize === 38
-              ? "last 2 cells empty"
-              : `first ${packSize} filled, remaining blank`}
-            .
+            Prints on A3 (29.7×42&nbsp;cm), with 4x4cm tickets.
           </span>
           <Button onClick={handlePrint} className="print:hidden">
             Print
@@ -347,7 +315,7 @@ const SheetPreview = ({
         </DialogCardDescription>
       </DialogHeader>
 
-      <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0 print:max-h-full">
+      <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0 print:max-h/full">
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
@@ -357,9 +325,7 @@ const SheetPreview = ({
               Sheet {i + 1} of {count}
             </h3>
 
-            {/* On-screen scaled sheet; print rules switch it to exact cm size */}
             <div className="sheet-viewport mx-auto">
-              {/* Watermark behind the grid */}
               <div className="sheet-inner paper-watermark sheet-inner--even">
                 {renderSheet(i)}
               </div>
@@ -464,19 +430,17 @@ export default function TicketsPage() {
     if (savedLogo) {
       setLogo(savedLogo);
     }
-    // This is a simplified way to sync counters. 
-    // In a real app, this would come from a database.
+    // Sync counters from "inventory"
     const sheets = getSheets();
     const latestCounters: CounterMap = {};
     sheets.forEach(sheet => {
-        const key = `${sheet.level}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
-        const endNumber = sheet.endNumber;
-        if (!latestCounters[key] || endNumber > latestCounters[key]) {
-            latestCounters[key] = endNumber;
-        }
+      const key = `${sheet.level}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
+      const endNumber = sheet.endNumber;
+      if (!latestCounters[key] || endNumber > latestCounters[key]) {
+        latestCounters[key] = endNumber;
+      }
     });
     setCounters(latestCounters);
-
   }, []);
 
   const handleLogoChange = (newLogo: string) => {
@@ -489,7 +453,6 @@ export default function TicketsPage() {
     const lastUsed = counters[key] ?? 0; // 0 => next is 1
     const newSheetStarts: number[] = [];
 
-    // For N sheets, allocate sequential ranges of packSize each
     for (let s = 0; s < generations; s++) {
       const startNumber = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
       newSheetStarts.push(startNumber);
@@ -498,7 +461,7 @@ export default function TicketsPage() {
         level,
         packSize,
         startNumber: startNumber,
-        endNumber: startNumber + packSize - 1,
+        endNumber: startNumber + packSize - 1, // (OK for our <=70 range)
         isAssigned: false,
         downloads: 0,
         generationDate: new Date(),
@@ -506,7 +469,6 @@ export default function TicketsPage() {
       addSheet(newSheet);
     }
 
-    // Compute new last used after allocating all sheets
     const totalTickets = generations * packSize;
     const newLast = (lastUsed + totalTickets);
 
@@ -606,7 +568,7 @@ export default function TicketsPage() {
           <CardHeader>
             <CardTitle>Ticket Preview</CardTitle>
           </CardHeader>
-          <CardContent>
+        <CardContent>
             <TicketPreview level={level} logoSrc={logo} />
           </CardContent>
         </Card>
