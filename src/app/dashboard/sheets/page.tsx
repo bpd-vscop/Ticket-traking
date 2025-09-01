@@ -59,8 +59,8 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
   const { packSize, level } = sheet;
 
   // --- Layout Customization ---
-  const ticketWidth = 40; // 4cm
-  const ticketHeight = 40; // 4cm
+  const ticketWidth = 45; // 4.5cm
+  const ticketHeight = 45; // 4.5cm
   const sheetWidth = 420; // A3 landscape width
   const sheetHeight = 297; // A3 landscape height
   const cols = 8; // Fixed 8 columns
