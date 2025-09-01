@@ -48,12 +48,21 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
   const { packSize, level } = sheet;
 
-  // --- Layout ---
-  const ticketWidth = 40;
-  const ticketHeight = 40;
+  // --- Layout Customization ---
+  const ticketWidth = 40; // 4cm
+  const ticketHeight = 40; // 4cm
   const sheetWidth = 420; // A3 landscape width
   const sheetHeight = 297; // A3 landscape height
-  const cols = Math.floor(sheetWidth / ticketWidth); // 10
+  const cols = 8; // Fixed 8 columns
+  const rows = Math.ceil(packSize / cols);
+  // --- End Customization ---
+
+  const gridWidth = cols * ticketWidth;
+  const gridHeight = rows * ticketHeight;
+
+  // Center the grid on the sheet
+  const marginLeft = (sheetWidth - gridWidth) / 2;
+  const marginTop = (sheetHeight - gridHeight) / 2;
 
   let ticketsSvg = "";
   for (let i = 0; i < packSize; i++) {
@@ -123,7 +132,9 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
       <rect width="100%" height="100%" fill="white" />
       <rect width="100%" height="100%" fill="url(#watermark)" />
       <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
-      ${ticketsSvg}
+       <g transform="translate(${marginLeft}, ${marginTop})">
+        ${ticketsSvg}
+      </g>
     </svg>
   `;
 };
@@ -265,6 +276,7 @@ const SheetPreview = ({
   sheetStarts: number[]; // starting serial (1..9999) per sheet
 }) => {
   const currentYear = new Date().getFullYear().toString().slice(-2);
+  const cols = 8; // Fixed 8 columns
 
   const renderSheet = (sheetIdx: number) => {
     const startSerial = sheetStarts[sheetIdx]; // 1..9999
@@ -290,7 +302,7 @@ const SheetPreview = ({
 
     return (
       <div className="sheet-grid-wrap">
-        <div className="grid-sheet relative z-10">{cells}</div>
+        <div className="grid-sheet-8-cols relative z-10">{cells}</div>
       </div>
     );
   };
@@ -326,7 +338,7 @@ const SheetPreview = ({
             </h3>
 
             <div className="sheet-viewport mx-auto">
-              <div className="sheet-inner paper-watermark sheet-inner--even">
+              <div className="sheet-inner paper-watermark">
                 {renderSheet(i)}
               </div>
             </div>

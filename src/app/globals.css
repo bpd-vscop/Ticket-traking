@@ -91,32 +91,25 @@
     margin-inline: auto;
   }
 
-  /* Inner padding.
-     For the preview we use UNIFORM margins (same top/bottom & left/right).
-     0.5cm / 42cm = 1.19%. 0.5cm / 29.7cm = 1.6835% on y-axis
-  */
+  /* Inner padding for the centered grid layout */
   .sheet-inner {
-    width: 100%;
-    height: 100%;
-    padding: 1.6835% 1.19%;
-    box-sizing: border-box;
-  }
-
-  .sheet-inner--even {
-      padding: 1.5% !important;
-  }
-
-  /* Wrap that centers the grid inside the inner area */
-  .sheet-grid-wrap {
     width: 100%;
     height: 100%;
     display: grid;
     place-items: center;
   }
 
+  /* Wrap that centers the grid inside the inner area */
+  .sheet-grid-wrap {
+    width: calc(8 * (100% / 10.5)); /* 8 columns out of 10.5 total to approx 40mm on 420mm */
+    height: calc(7 * (100% / 7.425)); /* 7 rows out of 7.425 total to approx 40mm on 297mm */
+    display: grid;
+    place-items: center;
+  }
+
   /* Grid that scales on screen with square cells.
      A3 landscape paper with 4x4cm tickets = 10x7 grid. aspect-ratio: 10/7 */
-  .grid-sheet {
+  .grid-sheet-10-cols {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
     grid-template-rows: repeat(7, 1fr);
@@ -125,6 +118,18 @@
     aspect-ratio: 10 / 7;
     margin: 0 auto;
   }
+  
+  /* New 8-column grid */
+  .grid-sheet-8-cols {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 0;
+    width: 100%;
+    aspect-ratio: 8 / 7;
+    margin: 0 auto;
+  }
+
 
   /* Ticket square (kept square in preview via grid-sheet aspect ratio) */
   .ticket {
@@ -193,22 +198,14 @@
     box-shadow: none;
   }
 
-  /* Equal real margins for print too (0.5cm on all sides) */
   .sheet-inner {
-    padding: 0.5cm !important;
+    padding: 0 !important;
+    display: block;
   }
 
-  /* Force exact 4cm cells for print */
-  .grid-sheet {
-    grid-template-columns: repeat(10, 4cm) !important;
-    grid-template-rows: repeat(7, 4cm) !important;
-    width: auto !important;
-    aspect-ratio: auto !important;
-  }
-
-  .ticket {
-    width: 4cm !important;
-    height: 4cm !important;
+  /* We don't need the wrappers for print, the SVG handles it */
+  .sheet-grid-wrap, .grid-sheet-8-cols, .grid-sheet-10-cols {
+      all: unset;
   }
 
   img, svg, canvas {

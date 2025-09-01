@@ -55,10 +55,6 @@ async function getPublicLogoDataUri(): Promise<string> {
 }
 
 const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: string): string => {
-  /*
-   * This function generates an SVG string for a sheet of tickets.
-   * Units are millimeters (mm). A3 is 420x297mm (landscape).
-   */
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
   const { packSize, level } = sheet;
 
@@ -67,8 +63,17 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
   const ticketHeight = 40; // 4cm
   const sheetWidth = 420; // A3 landscape width
   const sheetHeight = 297; // A3 landscape height
-  const cols = Math.floor(sheetWidth / ticketWidth); // 10 cols
+  const cols = 8; // Fixed 8 columns
+  const rows = Math.ceil(packSize / cols);
   // --- End Customization ---
+
+  const gridWidth = cols * ticketWidth;
+  const gridHeight = rows * ticketHeight;
+
+  // Center the grid on the sheet
+  const marginLeft = (sheetWidth - gridWidth) / 2;
+  const marginTop = (sheetHeight - gridHeight) / 2;
+
 
   let ticketsSvg = '';
   for (let i = 0; i < packSize; i++) {
@@ -85,19 +90,11 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
     const cx = barX + barW / 2;
     const cy = ticketHeight / 2;
 
-    // Each ticket is a <g> group element, positioned with a transform.
     ticketsSvg += `
       <g transform="translate(${x}, ${y})">
-        <!-- Dashed border for cutting -->
         <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
-
-        <!-- Right-side dark bar -->
         <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
-
-        <!-- Logo: Positioned in the left 80% of the ticket. -->
         <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
-
-        <!-- Vertically rotated reference text -->
         <text
           x="${cx}"
           y="${cy}"
@@ -117,9 +114,8 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
     `;
   }
 
-  // Watermark hex tiling
-  const watermarkTile = 75.5; // mm
-  const watermarkStepY = watermarkTile * 0.866; // sqrt(3)/2
+  const watermarkTile = 75.5;
+  const watermarkStepY = watermarkTile * 0.866;
 
   return `
     <svg
@@ -140,7 +136,9 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
       <rect width="100%" height="100%" fill="white" />
       <rect width="100%" height="100%" fill="url(#watermark)" />
       <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
-      ${ticketsSvg}
+      <g transform="translate(${marginLeft}, ${marginTop})">
+        ${ticketsSvg}
+      </g>
     </svg>
   `;
 };
