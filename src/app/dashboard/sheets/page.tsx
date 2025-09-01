@@ -57,17 +57,17 @@ async function getPublicLogoDataUri(): Promise<string> {
 const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: string): string => {
   /*
    * This function generates an SVG string for a sheet of tickets.
-   * Units are millimeters (mm). A3 is 297x420mm.
+   * Units are millimeters (mm). A3 is 420x297mm (landscape).
    */
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
   const { packSize, level } = sheet;
 
   // --- Layout Customization ---
-  const ticketWidth = 40;
-  const ticketHeight = 40;
-  const sheetWidth = 297; // A3 width
-  const sheetHeight = 420; // A3 height
-  const cols = Math.floor(sheetWidth / ticketWidth); // 7 cols
+  const ticketWidth = 40; // 4cm
+  const ticketHeight = 40; // 4cm
+  const sheetWidth = 420; // A3 landscape width
+  const sheetHeight = 297; // A3 landscape height
+  const cols = Math.floor(sheetWidth / ticketWidth); // 10 cols
   // --- End Customization ---
 
   let ticketsSvg = '';

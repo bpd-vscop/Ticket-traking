@@ -69,9 +69,9 @@
 /* =================== REAL-SIZE / PREVIEW UTILITIES =================== */
 @layer utilities {
   /* Exact sheet size in physical units (if you want a fixed-size element) */
-  .sheet-297x420 {
-    width: 29.7cm;
-    height: 42cm;
+  .sheet-420x297 {
+    width: 42cm;
+    height: 29.7cm;
     box-sizing: border-box;
   }
 
@@ -83,7 +83,7 @@
   /* Scaled on-screen preview that keeps A3 ratio */
   .sheet-viewport {
     width: min(100%, 800px);
-    aspect-ratio: 297 / 420;
+    aspect-ratio: 420 / 297;
     background: white;
     border: 1px solid hsl(var(--border));
     box-shadow: 0 1px 6px rgba(0,0,0,.06);
@@ -93,12 +93,12 @@
 
   /* Inner padding.
      For the preview we use UNIFORM margins (same top/bottom & left/right).
-     0.5cm / 29.7cm = 1.6835% on x-axis. 0.5cm / 42cm = 1.19% on y-axis
+     0.5cm / 42cm = 1.19%. 0.5cm / 29.7cm = 1.6835% on y-axis
   */
   .sheet-inner {
     width: 100%;
     height: 100%;
-    padding: 1.19% 1.6835%;
+    padding: 1.6835% 1.19%;
     box-sizing: border-box;
   }
 
@@ -115,14 +115,14 @@
   }
 
   /* Grid that scales on screen with square cells.
-     A3 paper with 4x4cm tickets = 7x10 grid. aspect-ratio: 7/10 */
+     A3 landscape paper with 4x4cm tickets = 10x7 grid. aspect-ratio: 10/7 */
   .grid-sheet {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(10, 1fr);
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(7, 1fr);
     gap: 0;
     width: 100%;
-    aspect-ratio: 7 / 10;
+    aspect-ratio: 10 / 7;
     margin: 0 auto;
   }
 
@@ -181,13 +181,13 @@
 /* ============================ PRINT RULES ============================ */
 @media print {
   @page {
-    size: 29.7cm 42cm;
+    size: 42cm 29.7cm;
     margin: 0;
   }
 
   .sheet-viewport {
-    width: 29.7cm !important;
-    height: 42cm !important;
+    width: 42cm !important;
+    height: 29.7cm !important;
     aspect-ratio: auto;
     border: none;
     box-shadow: none;
@@ -200,8 +200,8 @@
 
   /* Force exact 4cm cells for print */
   .grid-sheet {
-    grid-template-columns: repeat(7, 4cm) !important;
-    grid-template-rows: repeat(10, 4cm) !important;
+    grid-template-columns: repeat(10, 4cm) !important;
+    grid-template-rows: repeat(7, 4cm) !important;
     width: auto !important;
     aspect-ratio: auto !important;
   }

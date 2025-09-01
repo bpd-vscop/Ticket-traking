@@ -51,9 +51,9 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
   // --- Layout ---
   const ticketWidth = 40;
   const ticketHeight = 40;
-  const sheetWidth = 297; // A3 width
-  const sheetHeight = 420; // A3 height
-  const cols = Math.floor(sheetWidth / ticketWidth); // 7
+  const sheetWidth = 420; // A3 landscape width
+  const sheetHeight = 297; // A3 landscape height
+  const cols = Math.floor(sheetWidth / ticketWidth); // 10
 
   let ticketsSvg = "";
   for (let i = 0; i < packSize; i++) {
@@ -307,7 +307,7 @@ const SheetPreview = ({
         <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
         <DialogCardDescription className="flex justify-between items-center">
           <span>
-            Prints on A3 (29.7×42&nbsp;cm), with 4x4cm tickets.
+            Prints on A3 (42×29.7&nbsp;cm), with 4x4cm tickets.
           </span>
           <Button onClick={handlePrint} className="print:hidden">
             Print
