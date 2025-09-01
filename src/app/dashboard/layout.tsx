@@ -56,18 +56,18 @@ export default function DashboardLayout({
                     </Link>
                     <nav className="hidden md:flex items-center gap-2">
                         {navItems.map((item) => (
-                          <Link key={item.href} href={item.href} legacyBehavior passHref>
-                              <a
-                                className={cn(
-                                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                                  pathname === item.href
-                                    ? "bg-accent text-accent-foreground"
-                                    : "text-muted-foreground hover:bg-muted/50"
-                                )}
-                              >
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.label}</span>
-                              </a>
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                              pathname === item.href
+                                ? "bg-accent text-accent-foreground"
+                                : "text-muted-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.label}</span>
                           </Link>
                         ))}
                     </nav>
@@ -100,4 +100,3 @@ export default function DashboardLayout({
       </main>
     </div>
   );
-}
