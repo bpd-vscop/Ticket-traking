@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import jsPDF from "jspdf";
 import {
   Tabs,
   TabsContent,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, FileType } from "lucide-react";
 import { getSheets } from "@/lib/data";
 import { Level, Sheet, levels } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
@@ -156,7 +157,7 @@ const SheetCard = ({
   const [downloadCount, setDownloadCount] = useState(sheet.downloads);
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
 
-  const handleDownload = async () => {
+  const handleDownloadSvg = async () => {
     // Ticket left-side logo can be user-chosen, but watermark must be the public /logo.svg
     const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
     const watermarkHref = await getPublicLogoDataUri();
@@ -173,6 +174,39 @@ const SheetCard = ({
     URL.revokeObjectURL(url);
     setDownloadCount((prev) => prev + 1);
   };
+  
+  const handleDownloadPdf = async () => {
+    const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
+    const watermarkHref = await getPublicLogoDataUri();
+    const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
+
+    const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a3",
+    });
+
+    const svgElement = document.createElement('div');
+    svgElement.innerHTML = svgContent;
+    
+    // Temporarily append to body to ensure it's rendered for PDF generation
+    document.body.appendChild(svgElement);
+
+    // jsPDF can take an SVG string directly, but it may have trouble with external hrefs inside
+    // It's more reliable to let the browser render it first.
+    await doc.svg(svgElement.firstElementChild as SVGElement, {
+        x: 0,
+        y: 0,
+        width: 420,
+        height: 297
+    });
+
+    document.body.removeChild(svgElement);
+    
+    doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
+    setDownloadCount((prev) => prev + 1);
+  };
+
 
   return (
     <Card className={`transition-all ${isSelected ? 'border-primary ring-2 ring-primary' : ''}`}>
@@ -205,8 +239,11 @@ const SheetCard = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={handleDownload}>
+            <DropdownMenuItem onClick={handleDownloadSvg}>
               <FileText className="mr-2 h-4 w-4" /> SVG
+            </DropdownMenuItem>
+             <DropdownMenuItem onClick={handleDownloadPdf}>
+              <FileType className="mr-2 h-4 w-4" /> PDF
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -372,3 +409,5 @@ export default function SheetsPage() {
     </div>
   );
 }
+
+    
