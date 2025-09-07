@@ -152,8 +152,22 @@ export function ImageEditor({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+    <Dialog
+      open={isOpen}
+      // Keep this non-modal to avoid interfering with parent dialogs
+      // (prevents parent from closing when this child opens)
+      // @ts-ignore Radix prop passthrough
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] overflow-hidden"
+        // Prevent outside interactions from closing this dialog inadvertently
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CropIcon className="h-5 w-5" />
@@ -162,27 +176,31 @@ export function ImageEditor({
         </DialogHeader>
         
         <div className="flex flex-col items-center space-y-4">
-          <div className="relative max-w-full max-h-[60vh] overflow-auto">
-            <ReactCrop
-              crop={crop}
-              onChange={(c) => setCrop(c)}
-              onComplete={(c) => setCompletedCrop(c)}
-              aspect={aspectRatio}
-              circularCrop={true}
-              ruleOfThirds={true}
-            >
-              <img
-                ref={imgRef}
-                src={imageSrc}
-                alt="Crop preview"
-                onLoad={onImageLoad}
-                style={{ 
-                  maxWidth: '100%',
-                  maxHeight: '60vh',
-                  objectFit: 'contain'
-                }}
-              />
-            </ReactCrop>
+          <div className="relative max-w-full max-h-[60vh] overflow-auto min-h-[200px] flex items-center justify-center">
+            {imageSrc ? (
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={aspectRatio}
+                circularCrop={true}
+                ruleOfThirds={true}
+              >
+                <img
+                  ref={imgRef}
+                  src={imageSrc}
+                  alt="Crop preview"
+                  onLoad={onImageLoad}
+                  style={{ 
+                    maxWidth: '100%',
+                    maxHeight: '60vh',
+                    objectFit: 'contain'
+                  }}
+                />
+              </ReactCrop>
+            ) : (
+              <div className="text-sm text-muted-foreground">Loading image…</div>
+            )}
           </div>
           {/* Preview removed per request */}
         </div>
@@ -211,7 +229,7 @@ export function ImageEditor({
             <Button
               type="button"
               onClick={handleSave}
-              disabled={!completedCrop || isLoading}
+              disabled={!imageSrc || !completedCrop || isLoading}
               className="flex items-center gap-2"
             >
               {isLoading ? (

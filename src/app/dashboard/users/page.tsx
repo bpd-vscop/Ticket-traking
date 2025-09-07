@@ -112,6 +112,33 @@ const UserDialog = ({ user, onSave, children }: { user?: User | null, onSave: ()
     });
   }, [user, form]);
 
+  // Ensure form is cleared when the dialog closes and reinitialized when it opens
+  const getDefaults = () => ({
+    id: user?.id || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    username: user?.username || '',
+    email: user?.email || '',
+    role: user?.role || 'user',
+    password: '',
+    address: user?.address || '',
+    number: user?.number || '',
+    profilePicture: user?.profilePicture || '',
+  });
+
+  const blankDefaults = {
+    id: '',
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    role: 'user' as const,
+    password: '',
+    address: '',
+    number: '',
+    profilePicture: '',
+  };
+
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
     const apiUrl = isEditMode ? `/api/users/${values.id}` : '/api/users';
     const method = isEditMode ? 'PUT' : 'POST';
@@ -148,9 +175,26 @@ const UserDialog = ({ user, onSave, children }: { user?: User | null, onSave: ()
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (open) {
+          // When opening in Add mode, start from blanks
+          if (!isEditMode) form.reset(blankDefaults);
+          else form.reset(getDefaults());
+        } else {
+          // When closing, clear the form (so it doesn't cache typed values)
+          form.reset(blankDefaults);
+        }
+      }}
+    >
       <DialogTrigger asChild>{children}</DialogTrigger>
-<DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[90vh] overflow-y-auto rounded-lg">
+      <DialogContent
+        className="w-[95vw] max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[90vh] overflow-y-auto rounded-lg"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit User' : 'Create New User'}</DialogTitle>
           <DialogDescription>
@@ -174,6 +218,7 @@ const UserDialog = ({ user, onSave, children }: { user?: User | null, onSave: ()
                         onImageChange={(imageUrl) => form.setValue('profilePicture', imageUrl)}
                         size="lg"
                         className="w-24 h-24 sm:w-32 sm:h-32"
+                        fallbackInitials={`${(form.watch('firstName') || '').charAt(0).toUpperCase()}${(form.watch('lastName') || '').charAt(0).toUpperCase()}`}
                       />
                     </FormControl>
                     <FormMessage />

@@ -200,6 +200,7 @@ export default function SettingsPage() {
                           currentImage={field.value}
                           onImageChange={handleProfileImageChange}
                           size="lg"
+                          fallbackInitials={`${(form.watch('firstName') || '').charAt(0).toUpperCase()}${(form.watch('lastName') || '').charAt(0).toUpperCase()}`}
                         />
                       </FormControl>
                       <FormMessage />

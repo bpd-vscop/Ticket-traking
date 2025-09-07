@@ -4,6 +4,13 @@ import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
+    // Ensure controlled inputs don't flip from undefined -> defined
+    const hasValueProp = Object.prototype.hasOwnProperty.call(props, 'value');
+    const normalizedValue = hasValueProp && type !== 'file' ? ((props as any).value ?? '') : undefined;
+    const passProps = {
+      ...props,
+      ...(hasValueProp && type !== 'file' ? { value: normalizedValue } : {}),
+    } as React.InputHTMLAttributes<HTMLInputElement>;
     return (
       <input
         type={type}
@@ -12,7 +19,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
-        {...props}
+        {...passProps}
       />
     )
   }

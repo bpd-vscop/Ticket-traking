@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageEditor } from "@/components/ui/image-editor";
-import { Camera, User } from "lucide-react";
+import { Camera, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProfileImageUploadProps {
@@ -13,6 +13,7 @@ interface ProfileImageUploadProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
+  fallbackInitials?: string;
 }
 
 const sizeClasses = {
@@ -32,12 +33,14 @@ export function ProfileImageUpload({
   onImageChange,
   className,
   size = "lg",
-  disabled = false
+  disabled = false,
+  fallbackInitials,
 }: ProfileImageUploadProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -56,14 +59,16 @@ export function ProfileImageUpload({
     }
 
     try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (typeof e.target?.result === "string") {
-          setTempImageSrc(e.target.result);
-          setIsEditorOpen(true);
-        }
-      };
-      reader.readAsDataURL(file);
+      // Open editor immediately; use an object URL for instant preview
+      setIsEditorOpen(true);
+      // Revoke previous object URL if any
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+      const url = URL.createObjectURL(file);
+      objectUrlRef.current = url;
+      setTempImageSrc(url);
     } catch (error) {
       console.error('Error reading image file:', error);
       alert('Error reading image file. Please try again.');
@@ -85,11 +90,35 @@ export function ProfileImageUpload({
     onImageChange(croppedImageUrl);
     setIsEditorOpen(false);
     setTempImageSrc("");
+    // Revoke any object URL we created
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
   };
 
   const handleCloseEditor = () => {
     setIsEditorOpen(false);
     setTempImageSrc("");
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
+
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onImageChange("");
+    setTempImageSrc("");
+    setIsEditorOpen(false);
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -130,9 +159,29 @@ export function ProfileImageUpload({
               "bg-muted transition-all duration-200", 
               isHovered && !disabled && "bg-muted/80"
             )}>
-              <User className={iconSizes[size]} />
+              {fallbackInitials && fallbackInitials.trim() !== '' ? (
+                <span className="font-semibold">
+                  {fallbackInitials}
+                </span>
+              ) : (
+                <User className={iconSizes[size]} />
+              )}
             </AvatarFallback>
           </Avatar>
+
+          {/* Remove image button (bottom-left) */}
+          {!disabled && currentImage && currentImage.trim() !== '' && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              onClick={handleRemoveImage}
+              className="absolute -bottom-2 -left-2 h-7 w-7 rounded-full shadow-md"
+              title="Remove image"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
 
           {/* Hover overlay */}
           {isHovered && !disabled && (

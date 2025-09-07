@@ -154,7 +154,7 @@ export default function DashboardLayout({
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
                         <AvatarImage
-                          src={avatarSrc || `https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`}
+                          src={avatarSrc || undefined}
                           alt={user?.firstName && user?.lastName ? `${user?.firstName} ${user?.lastName}` : 'User'}
                           className="object-cover"
                         />
