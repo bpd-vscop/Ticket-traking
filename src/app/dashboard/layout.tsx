@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   Avatar,
   AvatarFallback,
@@ -23,13 +24,15 @@ import {
   Shield,
   Ticket,
   Users,
+  Loader2,
+  Settings,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
-  { href: "/dashboard/tickets", icon: Ticket, label: "Generate Tickets" },
+  { href: "/dashboard/tickets", icon: Ticket, label: "Generate Tickets", adminOnly: true },
   { href: "/dashboard/sheets", icon: LayoutGrid, label: "Sheets" },
   { href: "/dashboard/families", icon: Users, label: "Families" },
   { href: "/dashboard/packs", icon: PackageCheck, label: "Packs" },
@@ -43,6 +46,25 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+
+  const filteredNavItems = navItems.filter(item => 
+    !item.adminOnly || (item.adminOnly && user?.role === 'admin')
+  );
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-16 w-16 animate-spin" />
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+     // The middleware should handle redirection, but this is a fallback.
+    return null;
+  }
 
   return (
     <div className="min-h-screen w-full bg-muted/40">
@@ -55,7 +77,7 @@ export default function DashboardLayout({
                          <span className="text-lg font-semibold tracking-tight">TicketWise</span>
                     </Link>
                     <nav className="hidden md:flex items-center gap-2">
-                        {navItems.map((item) => (
+                        {filteredNavItems.map((item) => (
                           <Link
                             key={item.href}
                             href={item.href}
@@ -76,15 +98,22 @@ export default function DashboardLayout({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src="https://picsum.photos/100" alt="Admin" data-ai-hint="profile picture" />
-                        <AvatarFallback>A</AvatarFallback>
+                        <AvatarImage src={`https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`} alt={user?.name ?? 'User'} />
+                        <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="bottom" align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuLabel>
+                      <p className="font-medium">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => router.push("/")}>
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -100,3 +129,4 @@ export default function DashboardLayout({
       </main>
     </div>
   );
+}

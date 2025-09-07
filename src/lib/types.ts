@@ -54,5 +54,9 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  password?: string; // Add optional password
   role: "admin" | "user";
+  address?: string;
+  number?: string;
+  profilePicture?: string;
 };

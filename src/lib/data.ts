@@ -1,11 +1,5 @@
 import type { Sheet, Family, Teacher, User, Level } from './types';
 
-let mockUsers: User[] = [
-  { id: 'user-1', name: 'Admin User', email: 'admin@example.com', role: 'admin' },
-  { id: 'user-2', name: 'John Doe', email: 'john.doe@example.com', role: 'user' },
-  { id: 'user-3', name: 'Jane Smith', email: 'jane.smith@example.com', role: 'user' },
-];
-
 let mockTeachers: Teacher[] = [
   { id: 'teacher-1', name: 'Dr. Evelyn Reed' },
   { id: 'teacher-2', name: 'Mr. Samuel Carter' },
@@ -45,7 +39,6 @@ let mockFamilies: Family[] = [
 ];
 
 // Functions to interact with the mock data
-export const getUsers = () => mockUsers;
 export const getTeachers = () => mockTeachers;
 export const getSheets = () => mockSheets;
 export const getFamilies = () => mockFamilies;

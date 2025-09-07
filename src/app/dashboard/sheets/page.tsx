@@ -145,14 +145,17 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
 };
 
 
+import { useSession } from "next-auth/react";
 const SheetCard = ({
   sheet,
   isSelected,
   onSelect,
+  canDownload,
 }: {
   sheet: Sheet;
   isSelected: boolean;
   onSelect: (id: string, checked: boolean) => void;
+  canDownload: boolean;
 }) => {
   const [downloadCount, setDownloadCount] = useState(sheet.downloads);
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
@@ -238,7 +241,12 @@ const SheetCard = ({
       <CardFooter>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant={downloadCount > 0 ? "secondary" : "outline"} className="w-full">
+            <Button 
+              variant={downloadCount > 0 ? "secondary" : "outline"} 
+              className="w-full"
+              disabled={!canDownload}
+              title={!canDownload ? "You do not have permission to download" : "Download options"}
+            >
               <Download className="mr-2 h-4 w-4" />
               Download {downloadCount > 0 && `(${downloadCount})`}
             </Button>
@@ -348,9 +356,12 @@ const AssignmentModal = ({
 };
 
 export default function SheetsPage() {
+  const { data: session } = useSession();
   const [sheets, setSheets] = useState<Sheet[]>(getSheets().filter(s => !s.isAssigned));
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const canDownload = session?.user?.role === 'admin';
 
   const handleSelectSheet = (id: string, checked: boolean) => {
     setSelectedSheets((prev) =>
@@ -396,6 +407,7 @@ export default function SheetsPage() {
                     sheet={sheet}
                     isSelected={selectedSheets.includes(sheet.id)}
                     onSelect={handleSelectSheet}
+                    canDownload={canDownload}
                   />
                 ))}
               </div>
