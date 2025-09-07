@@ -189,8 +189,8 @@ const SheetCard = ({
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // For better quality, render at a higher resolution
-    const scale = 2;
+    // For better quality, render at a higher resolution. A scale of 4 should be sharp.
+    const scale = 4;
     const canvasWidth = 420 * scale;
     const canvasHeight = 297 * scale;
     canvas.width = canvasWidth;
@@ -250,6 +250,10 @@ const SheetCard = ({
              <DropdownMenuItem onClick={handleDownloadPdf}>
               <FileType className="mr-2 h-4 w-4" /> PDF
             </DropdownMenuItem>
+            {/* Note: EPS generation is not feasible in a browser environment.
+                It requires server-side tools like ImageMagick or Inkscape.
+                A user would typically open the SVG in a vector editor to export as EPS.
+            */}
           </DropdownMenuContent>
         </DropdownMenu>
       </CardFooter>
