@@ -181,30 +181,35 @@ const SheetCard = ({
     const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
 
     const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a3",
+      orientation: "landscape",
+      unit: "mm",
+      format: "a3",
     });
 
-    const svgElement = document.createElement('div');
-    svgElement.innerHTML = svgContent;
-    
-    // Temporarily append to body to ensure it's rendered for PDF generation
-    document.body.appendChild(svgElement);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-    // jsPDF can take an SVG string directly, but it may have trouble with external hrefs inside
-    // It's more reliable to let the browser render it first.
-    await doc.svg(svgElement.firstElementChild as SVGElement, {
-        x: 0,
-        y: 0,
-        width: 420,
-        height: 297
-    });
+    // For better quality, render at a higher resolution
+    const scale = 2;
+    const canvasWidth = 420 * scale;
+    const canvasHeight = 297 * scale;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
 
-    document.body.removeChild(svgElement);
-    
-    doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
-    setDownloadCount((prev) => prev + 1);
+    const img = new Image();
+    const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+      URL.revokeObjectURL(url);
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, "PNG", 0, 0, 420, 297);
+      doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
+      setDownloadCount((prev) => prev + 1);
+    };
+
+    img.src = url;
   };
 
 
