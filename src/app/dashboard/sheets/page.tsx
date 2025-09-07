@@ -190,7 +190,7 @@ const SheetCard = ({
     const ctx = canvas.getContext("2d");
 
     // For better quality, render at a higher resolution. A scale of 4 should be sharp.
-    const scale = 4;
+    const scale = 12;
     const canvasWidth = 420 * scale;
     const canvasHeight = 297 * scale;
     canvas.width = canvasWidth;
