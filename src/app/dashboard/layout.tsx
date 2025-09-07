@@ -128,7 +128,7 @@ export default function DashboardLayout({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={user?.profilePicture || `https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`} alt={`${user?.firstName} ${user?.lastName}` ?? 'User'} className="object-cover" />
+                        <AvatarImage src={user?.profilePicture || `https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`} alt={user?.firstName && user?.lastName ? `${user?.firstName} ${user?.lastName}` : 'User'} className="object-cover" />
                         <AvatarFallback>{user?.firstName?.charAt(0).toUpperCase()}{user?.lastName?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                     </Button>
