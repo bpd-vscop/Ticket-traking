@@ -26,8 +26,11 @@ import {
   Users,
   Loader2,
   Settings,
+  Menu,
+  X,
 } from "lucide-react";
-import { Logo } from "@/components/logo";
+import Image from "next/image";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -48,10 +51,27 @@ export default function DashboardLayout({
   const router = useRouter();
   const { data: session, status } = useSession();
   const user = session?.user;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const filteredNavItems = navItems.filter(item => 
     !item.adminOnly || (item.adminOnly && user?.role === 'admin')
   );
+
+  // Close mobile menu when pathname changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Handle session errors - clear session if corrupted
+  useEffect(() => {
+    if (status === "unauthenticated" && pathname !== "/" && typeof window !== 'undefined') {
+      // Clear any corrupted session data
+      document.cookie = 'next-auth.session-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = '__Secure-next-auth.session-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure;';
+      localStorage.clear();
+      router.push('/');
+    }
+  }, [status, pathname, router]);
 
   if (status === "loading") {
     return (
@@ -72,9 +92,8 @@ export default function DashboardLayout({
         <div className="container mx-auto px-4">
             <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border bg-card text-card-foreground shadow-lg h-16 px-6">
                 <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="flex items-center gap-3">
-                         <Logo />
-                         <span className="text-lg font-semibold tracking-tight">TicketWise</span>
+                    <Link href="/dashboard" className="flex items-center">
+                         <Image src="/logo.svg" alt="TicketWise Logo" width={40} height={40} className="w-32" />
                     </Link>
                     <nav className="hidden md:flex items-center gap-2">
                         {filteredNavItems.map((item) => (
@@ -94,18 +113,29 @@ export default function DashboardLayout({
                         ))}
                     </nav>
                 </div>
-                <DropdownMenu>
+                <div className="flex items-center gap-2">
+                    {/* Mobile Menu Button */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="md:hidden"
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    >
+                        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                    </Button>
+                    
+                    <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={`https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`} alt={user?.name ?? 'User'} />
-                        <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={user?.profilePicture || `https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`} alt={`${user?.firstName} ${user?.lastName}` ?? 'User'} className="object-cover" />
+                        <AvatarFallback>{user?.firstName?.charAt(0).toUpperCase()}{user?.lastName?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="bottom" align="end" className="w-56">
                     <DropdownMenuLabel>
-                      <p className="font-medium">{user?.name}</p>
+                      <p className="font-medium">{user?.firstName} {user?.lastName}</p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
@@ -119,7 +149,34 @@ export default function DashboardLayout({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
             </div>
+            
+            {/* Mobile Navigation Menu */}
+            {isMobileMenuOpen && (
+              <div className="md:hidden mt-2 mx-4">
+                <div className="rounded-xl border bg-card shadow-lg p-4">
+                  <nav className="flex flex-col space-y-2">
+                    {filteredNavItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors",
+                          pathname === item.href
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
+              </div>
+            )}
         </div>
       </header>
        <main className="container mx-auto p-4 sm:p-6 lg:p-8">

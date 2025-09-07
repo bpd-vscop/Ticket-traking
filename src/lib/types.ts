@@ -52,9 +52,11 @@ export type Teacher = {
 
 export type User = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  username: string;
   email: string;
-  password?: string; // Add optional password
+  password?: string;
   role: "admin" | "user";
   address?: string;
   number?: string;

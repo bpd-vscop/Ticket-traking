@@ -32,24 +32,28 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, password, role, address, number, profilePicture } = await request.json();
+    const { firstName, lastName, username, email, password, role, address, number, profilePicture } = await request.json();
 
-    if (!name || !email || !password || !role) {
+    if (!firstName || !lastName || !username || !email || !password || !role) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
     const client = await clientPromise;
     const db = client.db();
 
-    const existingUser = await db.collection('users').findOne({ email });
+    const existingUser = await db.collection('users').findOne({ 
+      $or: [{ email }, { username }] 
+    });
     if (existingUser) {
-      return NextResponse.json({ message: 'User with this email already exists' }, { status: 409 });
+      return NextResponse.json({ message: 'User with this email or username already exists' }, { status: 409 });
     }
 
     const hashedPassword = await hash(password, 12);
     const newUser: User = {
       id: `user-${Date.now()}`,
-      name,
+      firstName,
+      lastName,
+      username,
       email,
       password: hashedPassword,
       role,

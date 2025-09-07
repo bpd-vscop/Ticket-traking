@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Logo } from "@/components/logo";
+import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -24,7 +24,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,12 +39,12 @@ export default function LoginPage() {
     try {
       const result = await signIn("credentials", {
         redirect: false,
-        email,
+        emailOrUsername,
         password,
       });
 
       if (result?.error) {
-        setError("Invalid email or password. Please try again.");
+        setError("Invalid email/username or password. Please try again.");
       } else {
         toast({
           title: "Login Successful",
@@ -65,11 +65,10 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Logo />
+              <Image src="/logo.svg" alt="TicketWise Logo" width={48} height={48} className="w-72" />
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome to TicketWise</CardTitle>
-            <CardDescription>
-              Enter your credentials to access the admin panel.
+            <CardDescription className="italic">
+              Votre partenaire pour la réussite
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -81,14 +80,14 @@ export default function LoginPage() {
                 </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="emailOrUsername">Email or Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="name@connectschool.ma"
+                id="emailOrUsername"
+                type="text"
+                placeholder="name@connectschool.ma or username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
                 disabled={isLoading}
               />
             </div>

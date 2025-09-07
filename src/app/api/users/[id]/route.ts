@@ -51,14 +51,16 @@ export async function PUT(request: Request, { params }: { params: Params }) {
   }
 
   try {
-    const { name, email, role, password, address, number, profilePicture } = await request.json();
+    const { firstName, lastName, username, email, role, password, address, number, profilePicture } = await request.json();
     const updateData: any = {};
 
-    if (name) updateData.name = name;
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (address) updateData.address = address;
     if (number) updateData.number = number;
-    if (profilePicture) updateData.profilePicture = profilePicture;
+    if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
     
     // Only admins can change a user's role
     if (role && session.user.role === 'admin') {
@@ -75,6 +77,23 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 
     const client = await clientPromise;
     const db = client.db();
+
+    // Check for duplicate email or username (excluding current user)
+    if (email || username) {
+      const duplicateQuery: any = { 
+        id: { $ne: params.id },
+        $or: []
+      };
+      
+      if (email) duplicateQuery.$or.push({ email });
+      if (username) duplicateQuery.$or.push({ username });
+      
+      const existingUser = await db.collection('users').findOne(duplicateQuery);
+      if (existingUser) {
+        return NextResponse.json({ message: 'Email or username already exists' }, { status: 409 });
+      }
+    }
+
     const result = await db.collection('users').updateOne({ id: params.id }, { $set: updateData });
 
     if (result.matchedCount === 0) {

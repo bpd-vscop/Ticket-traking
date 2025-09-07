@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { NextAuthProvider } from './providers';
+import { SessionCleanup } from './session-cleanup';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.variable} font-body antialiased h-full`}>
+        <SessionCleanup />
         <NextAuthProvider>
           {children}
           <Toaster />
