@@ -38,33 +38,37 @@ export function ImageEditor({
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [isLoading, setIsLoading] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // No visible preview canvas; we render to an offscreen canvas when saving
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    
-    // Set initial crop to center square
-    const size = Math.min(width, height);
-    const x = (width - size) / 2;
-    const y = (height - size) / 2;
-    
-    setCrop({
-      unit: 'px',
+
+    // Set initial crop to a centered square at ~90% of the smallest side,
+    // so the crop area is clearly visible and adjustable.
+    const base = Math.min(width, height);
+    const size = Math.round(base * 0.9);
+    const x = Math.round((width - size) / 2);
+    const y = Math.round((height - size) / 2);
+
+    const init = {
+      unit: 'px' as const,
       width: size,
       height: size,
       x,
       y,
-    });
+    };
+    setCrop(init);
+    setCompletedCrop({ x, y, width: size, height: size });
   }, []);
 
   const getCroppedImg = useCallback(async (): Promise<string> => {
     const image = imgRef.current;
-    const canvas = canvasRef.current;
-    
-    if (!image || !canvas || !completedCrop) {
+    if (!image || !completedCrop) {
       throw new Error('Canvas or image not found');
     }
 
+    // Create an offscreen canvas
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('No 2d context');
@@ -113,8 +117,9 @@ export function ImageEditor({
   }, [completedCrop]);
 
   const handleSave = async () => {
-    if (!completedCrop) return;
-    
+    // completedCrop is set on image load; guard on image presence as well
+    if (!imgRef.current || !completedCrop) return;
+
     setIsLoading(true);
     try {
       const croppedImageUrl = await getCroppedImg();
@@ -142,6 +147,7 @@ export function ImageEditor({
         x,
         y,
       });
+      setCompletedCrop({ x, y, width: size, height: size });
     }
   };
 
@@ -163,6 +169,7 @@ export function ImageEditor({
               onComplete={(c) => setCompletedCrop(c)}
               aspect={aspectRatio}
               circularCrop={true}
+              ruleOfThirds={true}
             >
               <img
                 ref={imgRef}
@@ -177,23 +184,7 @@ export function ImageEditor({
               />
             </ReactCrop>
           </div>
-          
-          {/* Preview */}
-          {completedCrop && (
-            <div className="flex flex-col items-center space-y-2">
-              <p className="text-sm text-muted-foreground">Preview:</p>
-              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border">
-                <canvas
-                  ref={canvasRef}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          {/* Preview removed per request */}
         </div>
 
         <DialogFooter className="flex justify-between">

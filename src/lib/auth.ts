@@ -66,13 +66,11 @@ export const authOptions: NextAuthOptions = {
       // Handle sign in - keep token minimal
       if (user) {
         token.id = user.id;
-        token.firstName = (user as any).firstName?.substring(0, 20) || ''; // Limit length
-        token.lastName = (user as any).lastName?.substring(0, 20) || ''; // Limit length
-        token.username = (user as any).username?.substring(0, 20) || ''; // Limit length
+        token.firstName = (user as any).firstName?.substring(0, 20) || '';
+        token.lastName = (user as any).lastName?.substring(0, 20) || '';
+        token.username = (user as any).username?.substring(0, 20) || '';
         token.role = (user as any).role;
-        // Store only a hash or short identifier for profile picture to reduce size
-        const profilePic = (user as any).profilePicture;
-        token.profilePicture = profilePic ? (profilePic.length > 100 ? profilePic.substring(0, 100) + '...' : profilePic) : '';
+        // IMPORTANT: do not put profilePicture into the JWT to avoid large cookies (431 errors)
       }
       
       // Handle session updates
@@ -83,11 +81,11 @@ export const authOptions: NextAuthOptions = {
           const user = await usersCollection.findOne({ id: token.id as string });
           
           if (user) {
-            token.firstName = user.firstName;
-            token.lastName = user.lastName;
-            token.username = user.username;
+            token.firstName = user.firstName?.substring(0, 20) || '';
+            token.lastName = user.lastName?.substring(0, 20) || '';
+            token.username = user.username?.substring(0, 20) || '';
             token.role = user.role;
-            token.profilePicture = user.profilePicture;
+            // keep token small: no profilePicture here
           }
         } catch (error) {
           console.error('Error updating token:', error);
@@ -99,11 +97,12 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token) {
         session.user.id = token.id as string;
-        session.user.firstName = token.firstName as string;
-        session.user.lastName = token.lastName as string;
-        session.user.username = token.username as string;
+        session.user.firstName = (token.firstName as string) || '';
+        session.user.lastName = (token.lastName as string) || '';
+        session.user.username = (token.username as string) || '';
         session.user.role = token.role as 'admin' | 'user';
-        session.user.profilePicture = token.profilePicture as string;
+        // profilePicture intentionally omitted from token-backed session to prevent 431s
+        // Clients should fetch it via /api/users/:id when needed
       }
       return session;
     },

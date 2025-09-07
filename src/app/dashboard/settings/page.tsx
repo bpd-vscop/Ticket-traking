@@ -57,6 +57,7 @@ export default function SettingsPage() {
       number: '',
       profilePicture: '',
     },
+    mode: 'onChange',
   });
 
   useEffect(() => {
@@ -68,10 +69,10 @@ export default function SettingsPage() {
           if (response.ok) {
             const userData: User = await response.json();
             form.reset({
-              firstName: userData.firstName,
-              lastName: userData.lastName,
-              username: userData.username,
-              email: userData.email,
+              firstName: userData.firstName || '',
+              lastName: userData.lastName || '',
+              username: userData.username || '',
+              email: userData.email || '',
               address: userData.address || '',
               number: userData.number || '',
               profilePicture: userData.profilePicture || '',
@@ -166,9 +167,9 @@ export default function SettingsPage() {
     form.setValue('profilePicture', imageUrl);
   };
 
-  if (isFetching) {
+  if (isFetching || !session?.user) {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );

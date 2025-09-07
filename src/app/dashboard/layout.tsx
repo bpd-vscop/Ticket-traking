@@ -52,6 +52,7 @@ export default function DashboardLayout({
   const { data: session, status } = useSession();
   const user = session?.user;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState<string | undefined>(undefined);
 
   const filteredNavItems = navItems.filter(item => 
     !item.adminOnly || (item.adminOnly && user?.role === 'admin')
@@ -72,6 +73,30 @@ export default function DashboardLayout({
       router.push('/');
     }
   }, [status, pathname, router]);
+
+  // Load avatar image from API (kept out of JWT/session to avoid 431 errors)
+  useEffect(() => {
+    let cancelled = false;
+    const loadAvatar = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await fetch(`/api/users/${user.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          if (typeof data?.profilePicture === 'string' && data.profilePicture.trim() !== '') {
+            setAvatarSrc(data.profilePicture);
+          } else {
+            setAvatarSrc(undefined);
+          }
+        }
+      } catch {
+        // ignore; fallback avatar will be used
+      }
+    };
+    loadAvatar();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   if (status === "loading") {
     return (
@@ -128,8 +153,12 @@ export default function DashboardLayout({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={user?.profilePicture || `https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`} alt={user?.firstName && user?.lastName ? `${user?.firstName} ${user?.lastName}` : 'User'} className="object-cover" />
-                        <AvatarFallback>{user?.firstName?.charAt(0).toUpperCase()}{user?.lastName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage
+                          src={avatarSrc || `https://api.dicebear.com/8.x/bottts/svg?seed=${user?.email}`}
+                          alt={user?.firstName && user?.lastName ? `${user?.firstName} ${user?.lastName}` : 'User'}
+                          className="object-cover"
+                        />
+                        <AvatarFallback>{user?.firstName?.charAt(0)?.toUpperCase() || 'U'}{user?.lastName?.charAt(0)?.toUpperCase() || ''}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>

@@ -119,7 +119,7 @@ export function ProfileImageUpload({
             isHovered && !disabled && "border-primary/50"
           )}>
             <AvatarImage 
-              src={currentImage} 
+              src={currentImage && currentImage.trim() !== '' ? currentImage : undefined}
               alt="Profile picture" 
               className={cn(
                 "transition-all duration-200 object-cover", 
