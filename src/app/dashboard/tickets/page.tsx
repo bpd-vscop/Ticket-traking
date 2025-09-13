@@ -270,6 +270,21 @@ export default function TicketsPage() {
     const savedLogo = localStorage.getItem("ticketLogo");
     if (savedLogo) setLogo(savedLogo);
 
+    // Also try to load from DB (if available)
+    fetch('/api/logo', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.logo && typeof data.logo === 'string') {
+          setLogo(data.logo);
+          // keep local copy for offline continuity
+          localStorage.setItem('ticketLogo', data.logo);
+        }
+      })
+      .catch(() => {
+        // ignore network errors; localStorage fallback remains
+      });
+
     // Sync counters from "inventory"
     const sheets = getSheets();
     const latestCounters: CounterMap = {};
@@ -286,6 +301,14 @@ export default function TicketsPage() {
   const handleLogoChange = (newLogo: string) => {
     setLogo(newLogo);
     localStorage.setItem("ticketLogo", newLogo);
+    // Persist to DB as base64 (data URI)
+    fetch('/api/logo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUri: newLogo }),
+    }).catch(() => {
+      // ignore errors silently; localStorage still holds the value
+    });
   };
 
   const handleGenerate = () => {
