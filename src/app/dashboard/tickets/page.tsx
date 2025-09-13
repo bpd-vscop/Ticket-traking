@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,339 +12,181 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Level, PackSize, levels, packSizes, Sheet } from "@/lib/types";
-import { Edit, Sparkles, Upload } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { CardDescription as DialogCardDescription } from "@/components/ui/card";
+import { Edit, Sparkles } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { addSheet, getSheets } from "@/lib/data";
 
-/** Fixed grid: 7 cols × 10 rows on A3 paper */
-const COLS = 7;
-const ROWS = 10;
-const CAPACITY = COLS * ROWS; // 70
-
-/* ============================================================================
-   SVG generator (kept here for parity; if you later add a "Download as SVG"
-   from this page too, it will already use public/logo.svg for watermark).
-   ========================================================================== */
-const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: string): string => {
-  const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
-  const { packSize, level } = sheet;
-
-  // --- Layout Customization ---
-  const ticketWidth = 45; // 4.5cm
-  const ticketHeight = 45; // 4.5cm
-  const sheetWidth = 420; // A3 landscape width
-  const sheetHeight = 297; // A3 landscape height
-  const cols = 8; // Fixed 8 columns
-  const rows = Math.ceil(packSize / cols);
-  // --- End Customization ---
-
-  const gridWidth = cols * ticketWidth;
-  const gridHeight = rows * ticketHeight;
-
-  // Center the grid on the sheet
-  const marginLeft = (sheetWidth - gridWidth) / 2;
-  const marginTop = (sheetHeight - gridHeight) / 2;
-
-  let ticketsSvg = "";
-  for (let i = 0; i < packSize; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const x = col * ticketWidth;
-    const y = row * ticketHeight;
-    const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
-    const nn = String(serial).padStart(4, "0");
-    const code = `${level}-${currentYear}${nn}`;
-
-    const barX = ticketWidth * 0.8;
-    const barW = ticketWidth * 0.2;
-    const cx = barX + barW / 2;
-    const cy = ticketHeight / 2;
-
-    ticketsSvg += `
-      <g transform="translate(${x}, ${y})">
-        <!-- Dashed border for cutting -->
-        <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
-
-        <!-- Right-side dark bar -->
-        <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
-
-        <!-- Logo: left 80% -->
-        <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
-
-        <!-- Vertically rotated reference text -->
-        <text
-          x="${cx}"
-          y="${cy}"
-          transform="rotate(180 ${cx} ${cy})"
-          fill="white"
-          font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-          font-size="6"
-          font-weight="bold"
-          text-anchor="middle"
-          dominant-baseline="central"
-          letter-spacing="1"
-          style="writing-mode: vertical-rl;"
-        >
-          ${code}
-        </text>
-      </g>
-    `;
-  }
-
-  const watermarkTile = 75.5; // mm
-  const watermarkStepY = watermarkTile * 0.866;
-
-  return `
-    <svg
-      width="${sheetWidth}mm"
-      height="${sheetHeight}mm"
-      viewBox="0 0 ${sheetWidth} ${sheetHeight}"
-      xmlns="http://www.w3.org/2000/svg"
-      xmlns:xlink="http://www.w3.org/1999/xlink"
-    >
-      <defs>
-        <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-          <image href="${watermarkHref}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
-        </pattern>
-        <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-          <image href="${watermarkHref}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="white" />
-      <rect width="100%" height="100%" fill="url(#watermark)" />
-      <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
-       <g transform="translate(${marginLeft}, ${marginTop})">
-        ${ticketsSvg}
-      </g>
-    </svg>
-  `;
+// ----------------------------- Code39 Barcode ------------------------------
+const CODE39: Record<string, string> = {
+  "0": "n n n w w n w n n",
+  "1": "w n n w n n n n w",
+  "2": "n n w w n n n n w",
+  "3": "w n w w n n n n n",
+  "4": "n n n w w n n n w",
+  "5": "w n n w w n n n n",
+  "6": "n n w w w n n n n",
+  "7": "n n n w n n w n w",
+  "8": "w n n w n n w n n",
+  "9": "n n w w n n w n n",
+  A: "w n n n n w n n w",
+  B: "n n w n n w n n w",
+  C: "w n w n n w n n n",
+  D: "n n n n w w n n w",
+  E: "w n n n w w n n n",
+  F: "n n w n w w n n n",
+  G: "n n n n n w w n w",
+  H: "w n n n n w w n n",
+  I: "n n w n n w w n n",
+  J: "n n n n w w w n n",
+  K: "w n n n n n n w w",
+  L: "n n w n n n n w w",
+  M: "w n w n n n n w n",
+  N: "n n n n w n n w w",
+  O: "w n n n w n n w n",
+  P: "n n w n w n n w n",
+  Q: "n n n n n n w w w",
+  R: "w n n n n n w w n",
+  S: "n n w n n n w w n",
+  T: "n n n n w n w w n",
+  U: "w w n n n n n n w",
+  V: "n w w n n n n n w",
+  W: "w w w n n n n n n",
+  X: "n w n n w n n n w",
+  Y: "w w n n w n n n n",
+  Z: "n w w n w n n n n",
+  "-": "n w n n n n w n w",
+  ".": "w w n n n n w n n",
+  " ": "n w w n n n w n n",
+  "$": "n w n w n w n n n",
+  "/": "n w n w n n n w n",
+  "+": "n w n n n w n w n",
+  "%": "n n n w n w n w n",
+  "*": "n w n n w n w n n",
 };
 
-/* ------------------------------ Logo Uploader ----------------------------- */
-const LogoUploader = ({
+function sanitizeCode39(text: string): string {
+  const up = text.toUpperCase();
+  return up.replace(/[^0-9A-Z\. \-\$\/\+%]/g, "-");
+}
+
+function Barcode({ value }: { value: string }) {
+  const data = `*${sanitizeCode39(value)}*`;
+  const narrow = 1;
+  const wide = 3;
+  const quiet = 10;
+
+  const seq: number[] = [quiet];
+  let total = quiet;
+  for (let i = 0; i < data.length; i++) {
+    const patt = CODE39[data[i]];
+    if (!patt) continue;
+    const parts = patt.split(" ");
+    for (let j = 0; j < parts.length; j++) {
+      const w = parts[j] === "w" ? wide : narrow;
+      seq.push(w);
+      total += w;
+    }
+    seq.push(narrow);
+    total += narrow;
+  }
+  seq.push(quiet);
+  total += quiet;
+
+  let x = 0;
+  const bars: JSX.Element[] = [];
+  let drawBar = true;
+  for (let i = 0; i < seq.length; i++) {
+    const w = seq[i];
+    if (drawBar) {
+      bars.push(<rect key={i} x={x} y={0} width={w} height={100} fill="#111827" />);
+    }
+    x += w;
+    drawBar = !drawBar;
+  }
+
+  return (
+    <svg viewBox={`0 0 ${total} 100`} preserveAspectRatio="none" className="w-full h-full">
+      {bars}
+    </svg>
+  );
+}
+
+/* ------------------------------ Ticket Preview ----------------------------- */
+const TicketPreviewWithEditor = ({
+  level,
   logoSrc,
   onLogoChange,
 }: {
+  level: Level;
   logoSrc: string;
   onLogoChange: (src: string) => void;
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (typeof e.target?.result === "string") {
-          onLogoChange(e.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  return (
-    <div
-      className="relative w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg cursor-pointer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={handleButtonClick}
-    >
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-        accept="image/*"
-      />
-      <div className="relative w-full h-full">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoSrc}
-          alt="Logo"
-          className={cn(
-            "w-full h-full object-contain transition-opacity",
-            isHovered && "opacity-50"
-          )}
-        />
-        {isHovered && (
-          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white rounded-lg">
-            <Upload className="h-6 w-6" />
-            <span className="text-xs mt-1">Change Logo</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* ------------------------------ Ticket Preview ----------------------------- */
-const TicketPreview = ({
-  level,
-  logoSrc,
-}: {
-  level: Level;
-  logoSrc: string;
-}) => {
   const currentYear = new Date().getFullYear().toString().slice(-2);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const triggerPick = () => fileRef.current?.click();
+  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (typeof ev.target?.result === "string") onLogoChange(ev.target.result);
+    };
+    reader.readAsDataURL(f);
+    e.currentTarget.value = "";
+  };
+
+  // Barcode area reduced by one third (from 20% -> ~13.333%)
+  const BARCODE_AREA = "15%";
+  const LOGO_AREA = "85%";
 
   return (
-    <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
-      <div className="w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]">
-        <div className="relative flex items-center justify-center p-4">
-          <img src={logoSrc} alt="Logo" className="w-full h-full object-contain" />
+    <div className="relative w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
+      <input ref={fileRef} type="file" accept="image/*" onChange={handlePick} className="hidden" />
+
+      {/* Ticket card */}
+      <div className="relative w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]">
+        {/* Left: logo + barcode area */}
+        <div className="relative">
+          {/* Logo region (taller now) */}
+          <div className="absolute inset-x-0 top-0" style={{ height: LOGO_AREA }}>
+            <div className="w-full h-full flex items-center justify-center p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          </div>
+
+          {/* Barcode region: full width with small margins on all sides */}
+          <div className="absolute left-0 right-0 bottom-0" style={{ height: BARCODE_AREA }}>
+            <div className="w-full h-full flex items-centre justify-centre mx-1.5">
+              <div className="w-full h-full">
+                <Barcode value={`${level}-${currentYear}XXX`} />
+              </div>
+            </div>
+          </div>
         </div>
-        {/* Right bar: center + 180° rotation */}
+
+        {/* Right bar with rotated reference */}
         <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
           <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
             {level}-{currentYear}XXX
           </p>
         </div>
       </div>
+
+      {/* Edit button moved to bottom-right (yellow-highlighted position) */}
+      <Button
+        size="sm"
+        variant="secondary"
+        className="absolute bottom-6 right-6 shadow"
+        onClick={triggerPick}
+      >
+        <Edit className="h-4 w-4 mr-1" /> Edit
+      </Button>
     </div>
-  );
-};
-
-/* ------------------------------ Ticket Cell -------------------------------- */
-function TicketCell({
-  code,
-  logoSrc,
-  isBlank,
-}: {
-  code: string;
-  logoSrc: string;
-  isBlank: boolean;
-}) {
-  if (isBlank) {
-    return <div className="ticket ticket--blank" aria-hidden="true" />;
-  }
-  return (
-    <div className="ticket">
-      <div className="ticket__left">
-        <img
-          src={logoSrc}
-          alt="Logo"
-          className="w-full h-full object-contain opacity-60"
-        />
-      </div>
-      {/* Ensure centered text + 180° rotation inside the bar */}
-      <div className="ticket__right flex items-center justify-center">
-        <span className="ticket__code m-0 leading-none font-mono font-bold [writing-mode:vertical-rl] rotate-180 origin-center tracking-wider">
-          {code}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------------- Sheet Preview -------------------------------- */
-const SheetPreview = ({
-  level,
-  packSize,
-  count,
-  logoSrc,
-  sheetStarts,
-}: {
-  level: Level;
-  packSize: PackSize; // 24 or 38 (<=70)
-  count: number;
-  logoSrc: string;
-  sheetStarts: number[]; // starting serial (1..9999) per sheet
-}) => {
-  const currentYear = new Date().getFullYear().toString().slice(-2);
-  const cols = 8; // Fixed 8 columns
-
-  const renderSheet = (sheetIdx: number) => {
-    const startSerial = sheetStarts[sheetIdx]; // 1..9999
-    const codes: string[] = [];
-
-    for (let k = 0; k < packSize; k++) {
-      const serial = ((startSerial - 1 + k) % 9999) + 1;
-      const nn = String(serial).padStart(4, "0");
-      codes.push(`${level}-${currentYear}${nn}`);
-    }
-
-    const cells = Array.from({ length: CAPACITY }).map((_, i) => {
-      const code = i < packSize ? codes[i] : "";
-      return (
-        <TicketCell
-          key={i}
-          code={code}
-          logoSrc={logoSrc}
-          isBlank={i >= packSize}
-        />
-      );
-    });
-
-    return (
-      <div className="sheet-grid-wrap">
-        <div className="grid-sheet-8-cols relative z-10">{cells}</div>
-      </div>
-    );
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  if (count === 0) return null;
-
-  return (
-    <DialogContent className="max-w-[95vw] p-4 print:max-w/full print:p-0">
-      <DialogHeader className="print:hidden">
-        <DialogTitle>Generated Sheets Preview ({count}x)</DialogTitle>
-        <DialogCardDescription className="flex justify-between items-center">
-          <span>
-            Prints on A3 (42×29.7&nbsp;cm), with 4x4cm tickets.
-          </span>
-          <Button onClick={handlePrint} className="print:hidden">
-            Print
-          </Button>
-        </DialogCardDescription>
-      </DialogHeader>
-
-      <div className="max-h-[70vh] overflow-auto p-4 space-y-6 bg-gray-200 print:bg-transparent print:p-0 print:overflow-visible print:space-y-0 print:max-h/full">
-        {Array.from({ length: count }).map((_, i) => (
-          <div
-            key={i}
-            className="bg-card p-4 rounded-lg print:p-0 print:rounded-none print:shadow-none print:break-after-page"
-          >
-            <h3 className="font-semibold mb-2 text-center text-sm print:hidden">
-              Sheet {i + 1} of {count}
-            </h3>
-
-            <div className="sheet-viewport mx-auto">
-              <div className="sheet-inner paper-watermark">
-                {renderSheet(i)}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </DialogContent>
   );
 };
 
@@ -370,12 +211,7 @@ const GenerationsSelector = ({
         className="flex items-center gap-2"
       >
         {options.map((opt) => (
-          <RadioGroupItem
-            key={opt}
-            value={String(opt)}
-            id={`gen-opt-${opt}`}
-            className="sr-only"
-          />
+          <RadioGroupItem key={opt} value={String(opt)} id={`gen-opt-${opt}`} className="sr-only" />
         ))}
         <RadioGroupItem value="custom" id="gen-opt-custom" className="sr-only" />
 
@@ -425,27 +261,19 @@ export default function TicketsPage() {
   // sequential counters per (level, year)
   const [counters, setCounters] = useState<CounterMap>({});
 
-  // start serial (1..9999) for each generated sheet
-  const [sheetStarts, setSheetStarts] = useState<number[]>([]);
-  const [generatedCount, setGeneratedCount] = useState(0);
-
   const { toast } = useToast();
 
-  const yy = useMemo(
-    () => new Date().getFullYear().toString().slice(-2),
-    []
-  );
+  const yy = useMemo(() => new Date().getFullYear().toString().slice(-2), []);
 
   useEffect(() => {
     // Load logo from local storage on mount
     const savedLogo = localStorage.getItem("ticketLogo");
-    if (savedLogo) {
-      setLogo(savedLogo);
-    }
+    if (savedLogo) setLogo(savedLogo);
+
     // Sync counters from "inventory"
     const sheets = getSheets();
     const latestCounters: CounterMap = {};
-    sheets.forEach(sheet => {
+    sheets.forEach((sheet) => {
       const key = `${sheet.level}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
       const endNumber = sheet.endNumber;
       if (!latestCounters[key] || endNumber > latestCounters[key]) {
@@ -463,17 +291,15 @@ export default function TicketsPage() {
   const handleGenerate = () => {
     const key = `${level}-${yy}`;
     const lastUsed = counters[key] ?? 0; // 0 => next is 1
-    const newSheetStarts: number[] = [];
 
     for (let s = 0; s < generations; s++) {
       const startNumber = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
-      newSheetStarts.push(startNumber);
       const newSheet: Sheet = {
         id: `sheet-${Date.now()}-${s}`,
         level,
         packSize,
-        startNumber: startNumber,
-        endNumber: startNumber + packSize - 1, // (OK for our <=70 range)
+        startNumber,
+        endNumber: startNumber + packSize - 1, // within our <=70 range
         isAssigned: false,
         downloads: 0,
         generationDate: new Date(),
@@ -482,11 +308,9 @@ export default function TicketsPage() {
     }
 
     const totalTickets = generations * packSize;
-    const newLast = (lastUsed + totalTickets);
+    const newLast = lastUsed + totalTickets;
 
     setCounters((prev) => ({ ...prev, [key]: newLast }));
-    setSheetStarts(newSheetStarts);
-    setGeneratedCount(generations);
 
     toast({
       title: "Sheets Generated",
@@ -499,75 +323,74 @@ export default function TicketsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Generate New Tickets</CardTitle>
-          <CardDescription>
-            Fill in the details to generate new ticket sheets.
-          </CardDescription>
+          <CardDescription>Fill in the details to generate new ticket sheets.</CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-6">
+          {/* Level chips (dropdown removed) */}
           <div className="space-y-2">
-            <Label htmlFor="level">Level</Label>
-            <Select onValueChange={(v) => setLevel(v as Level)} defaultValue={level}>
-              <SelectTrigger id="level">
-                <SelectValue placeholder="Select a level" />
-              </SelectTrigger>
-              <SelectContent>
+            <Label>Level</Label>
+            <div className="mt-2">
+              <RadioGroup value={level} onValueChange={(v) => setLevel(v as Level)} className="flex flex-wrap gap-2">
                 {levels.map((l) => (
-                  <SelectItem key={l} value={l}>
-                    {
-                      {
-                        P: "Primaire",
-                        C: "Collège",
-                        L: "Lycée",
-                        S: "Supérieur",
-                        E: "Spéciale",
-                      }[l]
-                    }
-                  </SelectItem>
+                  <>
+                    <RadioGroupItem key={`lvl-item-${l}`} value={l} id={`lvl-${l}`} className="sr-only" />
+                    <Label
+                      key={`lvl-label-${l}`}
+                      htmlFor={`lvl-${l}`}
+                      className={cn(
+                        "px-3 py-2 rounded-full border-2 cursor-pointer text-sm font-medium",
+                        level === l
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-accent hover:text-accent-foreground border-input"
+                      )}
+                    >
+                      {{ P: "Primaire", C: "Collège", L: "Lycée", S: "Supérieur", E: "Spéciale" }[l]}
+                    </Label>
+                  </>
                 ))}
-              </SelectContent>
-            </Select>
+              </RadioGroup>
+            </div>
           </div>
 
+          {/* Pack Size chips (dropdown removed) */}
           <div className="space-y-2">
-            <Label htmlFor="pack-size">Pack Size</Label>
-            <Select
-              onValueChange={(v) => setPackSize(Number(v) as PackSize)}
-              defaultValue={String(packSize)}
-            >
-              <SelectTrigger id="pack-size">
-                <SelectValue placeholder="Select pack size" />
-              </SelectTrigger>
-              <SelectContent>
+            <Label>Pack Size</Label>
+            <div className="mt-2">
+              <RadioGroup
+                value={String(packSize)}
+                onValueChange={(v) => setPackSize(Number(v) as PackSize)}
+                className="flex flex-wrap gap-2"
+              >
                 {packSizes.map((s) => (
-                  <SelectItem key={s} value={String(s)}>
-                    {s} Tickets
-                  </SelectItem>
+                  <>
+                    <RadioGroupItem key={`ps-item-${s}`} value={String(s)} id={`ps-${s}`} className="sr-only" />
+                    <Label
+                      key={`ps-label-${s}`}
+                      htmlFor={`ps-${s}`}
+                      className={cn(
+                        "px-3 py-2 rounded-full border-2 cursor-pointer text-sm font-medium",
+                        packSize === s
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-accent hover:text-accent-foreground border-input"
+                      )}
+                    >
+                      {s} Tickets
+                    </Label>
+                  </>
                 ))}
-              </SelectContent>
-            </Select>
+              </RadioGroup>
+            </div>
           </div>
 
+          {/* Number of sheets */}
           <div className="space-y-2">
             <Label>Number of Sheets</Label>
             <GenerationsSelector value={generations} onChange={setGenerations} />
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-between">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" disabled={generatedCount === 0}>
-                View Sheets
-              </Button>
-            </DialogTrigger>
-            <SheetPreview
-              level={level}
-              packSize={packSize}
-              count={generatedCount}
-              logoSrc={logo}
-              sheetStarts={sheetStarts}
-            />
-          </Dialog>
+        <CardFooter className="flex justify-end">
           <Button onClick={handleGenerate}>
             <Sparkles className="mr-2 h-4 w-4" />
             Generate
@@ -580,16 +403,8 @@ export default function TicketsPage() {
           <CardHeader>
             <CardTitle>Ticket Preview</CardTitle>
           </CardHeader>
-        <CardContent>
-            <TicketPreview level={level} logoSrc={logo} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Logo</CardTitle>
-          </CardHeader>
           <CardContent>
-            <LogoUploader logoSrc={logo} onLogoChange={handleLogoChange} />
+            <TicketPreviewWithEditor level={level} logoSrc={logo} onLogoChange={handleLogoChange} />
           </CardContent>
         </Card>
       </div>

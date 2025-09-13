@@ -1,0 +1,81 @@
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------ Ticket Preview ----------------------------- */
+const TicketPreview = ({
+  level,
+  logoSrc,
+}: {
+  level: Level;
+  logoSrc: string;
+}) => {
+  const currentYear = new Date().getFullYear().toString().slice(-2);
+
+  return (
+    <div className="w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
+      <div className="w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]">
+        <div className="relative flex items-center justify-center p-4">
+          <img src={logoSrc} alt="Logo" className="w-full h-full object-contain" />
+        </div>
+        {/* Right bar: center + 180° rotation */}
+        <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
+          <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
+            {level}-{currentYear}XXX
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------ Ticket Cell -------------------------------- */
+function TicketCell({
+  code,
+  logoSrc,
+  isBlank,
+}: {
+  code: string;
+  logoSrc: string;
+  isBlank: boolean;
+}) {
+  if (isBlank) {
+    return <div className="ticket ticket--blank" aria-hidden="true" />;
+  }
+  return (
+    <div className="ticket">
+      <div className="ticket__left relative">
+        <div className="absolute inset-x-0 top-0" style={{ height: 'calc(100% - 16.666%)' }}>
+          <div className="w-full h-full flex items-center justify-center p-2">
+            <img
+              src={logoSrc}
+              alt="Logo"
+              className="max-w-full max-h-full object-contain opacity-60"
+            />
+          </div>
+        </div>
+        <div className="absolute inset-x-1 bottom-1" style={{ height: '16.666%' }}>
+          <Barcode value={code} />
+        </div>
+      </div>
+      {/* Ensure centered text + 180° rotation inside the bar */}
+      <div className="ticket__right flex items-center justify-center">
+        <span className="ticket__code m-0 leading-none font-mono font-bold [writing-mode:vertical-rl] rotate-180 origin-center tracking-wider">
+          {code}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- Sheet Preview -------------------------------- */
+const SheetPreview = ({
+  level,
+  packSize,
+  count,
+  logoSrc,
+  sheetStarts,
+}: {
+  level: Level;
