@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -263,8 +263,6 @@ export default function TicketsPage() {
 
   const { toast } = useToast();
 
-  const yy = useMemo(() => new Date().getFullYear().toString().slice(-2), []);
-
   useEffect(() => {
     // Load logo from local storage on mount
     const savedLogo = localStorage.getItem("ticketLogo");
@@ -296,6 +294,24 @@ export default function TicketsPage() {
       }
     });
     setCounters(latestCounters);
+
+    // Merge counters from DB (authoritative) if available
+    fetch('/api/sheets', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        const dbCounters: CounterMap = { ...latestCounters };
+        (data?.sheets || []).forEach((s: any) => {
+          const dt = new Date(s.generationDate);
+          const key = `${s.level}-${dt.getFullYear().toString().slice(-2)}`;
+          const endNumber = Number(s.endNumber) || 0;
+          if (!dbCounters[key] || endNumber > dbCounters[key]) {
+            dbCounters[key] = endNumber;
+          }
+        });
+        setCounters(dbCounters);
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogoChange = (newLogo: string) => {
@@ -312,25 +328,51 @@ export default function TicketsPage() {
   };
 
   const handleGenerate = () => {
+    const yy = new Date().getFullYear().toString().slice(-2);
     const key = `${level}-${yy}`;
     const lastUsed = counters[key] ?? 0; // 0 => next is 1
 
+    // Prevent wrap within the same year
+    const totalTickets = generations * packSize;
+    const projectedEnd = lastUsed + totalTickets;
+    if (projectedEnd > 9999) {
+      toast({
+        title: 'Generation exceeds yearly limit',
+        description: `Not enough remaining serials for ${level}-${yy}. Reduce quantity or wait for year change.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const createdSheets: Sheet[] = [];
     for (let s = 0; s < generations; s++) {
-      const startNumber = ((lastUsed + s * packSize) % 9999) + 1; // 1..9999
+      const startNumber = lastUsed + 1 + s * packSize; // strictly increasing within the year
       const newSheet: Sheet = {
         id: `sheet-${Date.now()}-${s}`,
         level,
         packSize,
         startNumber,
-        endNumber: startNumber + packSize - 1, // within our <=70 range
+        endNumber: startNumber + packSize - 1,
         isAssigned: false,
         downloads: 0,
         generationDate: new Date(),
       };
-      addSheet(newSheet);
+      createdSheets.push(newSheet);
+      addSheet(newSheet); // keep local mock for immediate UX
     }
 
-    const totalTickets = generations * packSize;
+    // Persist to DB
+    try {
+      fetch('/api/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheets: createdSheets.map(s => ({
+          ...s,
+          generationDate: s.generationDate.toISOString(),
+        })) }),
+      }).catch(() => {});
+    } catch {}
+
     const newLast = lastUsed + totalTickets;
 
     setCounters((prev) => ({ ...prev, [key]: newLast }));

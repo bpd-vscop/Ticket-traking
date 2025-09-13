@@ -3,9 +3,9 @@
 ## Core Features:
 
 - Admin Authentication: Admin login and user management (CRUD).
-- Ticket Generation Form: Ticket creation form with fields for pack size (24/36), level (P, C, L, S, Se), and number of generations.
+- Ticket Generation Form: Ticket creation form with fields for pack size (24/36), level (P, C, L, S, E), and number of generations.
 - Ticket Numbering: Automatic ticket number generation based on level and year (e.g., P-25001).
-- Sheet Generation & Logo editor: Generates printable sheet (30cm/20cm) with generated tickets, fitting 24 or 36 tickets per sheet; generate the specified number of sheets. Allows editing the logo displayed on tickets upon hovering.
+- Sheet Generation & Logo editor: Generates printable sheet (45cm/32cm) with generated tickets, fitting 24 or 38 tickets per sheet; generate the specified number of sheets. Allows editing the logo displayed on tickets upon hovering.
 - Sheet Table Display & download manager: Displays generated sheets as cards with starting/ending numbers, categorized by level, including a download button with a download counter and various file type options to save the sheet for printing purposes.
 - Sheet Assignment: Allows selecting one or multiple sheets and assigning them to a family via a popup with fields for parent names, student name, subjects/hours, total amount (with reduction), and payment methods (cash, cheque, card).
 - Family Display & teacher assignments: Displays family information, categorized by level, including an option to assign teacher(s) to a family. It includes packs information and teachers informations validation table.

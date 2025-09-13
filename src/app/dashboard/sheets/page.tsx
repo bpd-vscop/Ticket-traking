@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import {
   Tabs,
@@ -76,6 +76,102 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
   const marginTop = (sheetHeight - gridHeight) / 2;
 
 
+  // Code39 encoding (replicated from preview for identical look)
+  const CODE39: Record<string, string> = {
+    "0": "n n n w w n w n n",
+    "1": "w n n w n n n n w",
+    "2": "n n w w n n n n w",
+    "3": "w n w w n n n n n",
+    "4": "n n n w w n n n w",
+    "5": "w n n w w n n n n",
+    "6": "n n w w w n n n n",
+    "7": "n n n w n n w n w",
+    "8": "w n n w n n w n n",
+    "9": "n n w w n n w n n",
+    A: "w n n n n w n n w",
+    B: "n n w n n w n n w",
+    C: "w n w n n w n n n",
+    D: "n n n n w w n n w",
+    E: "w n n n w w n n n",
+    F: "n n w n w w n n n",
+    G: "n n n n n w w n w",
+    H: "w n n n n w w n n",
+    I: "n n w n n w w n n",
+    J: "n n n n w w w n n",
+    K: "w n n n n n n w w",
+    L: "n n w n n n n w w",
+    M: "w n w n n n n w n",
+    N: "n n n n w n n w w",
+    O: "w n n n w n n w n",
+    P: "n n w n w n n w n",
+    Q: "n n n n n n w w w",
+    R: "w n n n n n w w n",
+    S: "n n w n n n w w n",
+    T: "n n n n w n w w n",
+    U: "w w n n n n n n w",
+    V: "n w w n n n n n w",
+    W: "w w w n n n n n n",
+    X: "n w n n w n n n w",
+    Y: "w w n n w n n n n",
+    Z: "n w w n w n n n n",
+    "-": "n w n n n n w n w",
+    ".": "w w n n n n w n n",
+    " ": "n w w n n n w n n",
+    "$": "n w n w n w n n n",
+    "/": "n w n w n n n w n",
+    "+": "n w n n n w n w n",
+    "%": "n n n w n w n w n",
+    "*": "n w n n w n w n n",
+  };
+
+  const code39BarsSvg = (value: string, x: number, y: number, width: number, height: number) => {
+    const sanitize = (t: string) => t.toUpperCase().replace(/[^0-9A-Z\. \-\$\/\+%]/g, "-");
+    const data = `*${sanitize(value)}*`;
+    const narrow = 1;
+    const wide = 3;
+    const quiet = 10; // replicate preview quiet zone
+
+    // Build sequence of unit widths, starting/ending with quiet
+    const seq: number[] = [quiet];
+    let totalUnits = quiet;
+    for (let i = 0; i < data.length; i++) {
+      const patt = CODE39[data[i]];
+      if (!patt) continue;
+      const parts = patt.split(" ");
+      for (let j = 0; j < parts.length; j++) {
+        const w = parts[j] === "w" ? wide : narrow;
+        seq.push(w);
+        totalUnits += w;
+      }
+      // inter-character narrow space
+      seq.push(narrow);
+      totalUnits += narrow;
+    }
+    seq.push(quiet);
+    totalUnits += quiet;
+
+    // Margins inside barcode box (small, to mimic preview mx-1.5)
+    const margin = 0.5; // mm
+    const bx = x + margin +1;
+    const by = y + margin;
+    const bw = Math.max(0, width - margin * 2);
+    const bh = Math.max(0, height - margin * 2);
+    const unitW = bw / totalUnits;
+
+    let cx = bx;
+    let drawBar = true;
+    let svg = "";
+    for (let i = 0; i < seq.length; i++) {
+      const w = seq[i] * unitW;
+      if (drawBar) {
+        svg += `<rect x="${cx}" y="${by}" width="${w}" height="${bh}" fill="#111827" />`;
+      }
+      cx += w;
+      drawBar = !drawBar;
+    }
+    return svg;
+  };
+
   let ticketsSvg = '';
   for (let i = 0; i < packSize; i++) {
     const row = Math.floor(i / cols);
@@ -86,16 +182,32 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
     const nn = String(serial).padStart(4, "0");
     const code = `${level}-${currentYear}${nn}`;
 
-    const barX = ticketWidth * 0.8;
-    const barW = ticketWidth * 0.2;
-    const cx = barX + barW / 2;
+    // Dimensions matching preview layout
+    const rightBarX = ticketWidth * 0.8;
+    const rightBarW = ticketWidth * 0.2;
+    const leftW = ticketWidth * 0.8;
+    const barcodeH = ticketHeight * 0.15; // 15% of ticket height
+    const logoH = ticketHeight - barcodeH; // 85%
+
+    const cx = rightBarX + rightBarW / 2;
     const cy = ticketHeight / 2;
+
+    // Build barcode SVG for bottom of left area
+    const barcodeSvg = code39BarsSvg(code, 0, ticketHeight - barcodeH, leftW, barcodeH);
 
     ticketsSvg += `
       <g transform="translate(${x}, ${y})">
+        <!-- Solid white background to cover watermark pattern under the ticket -->
+        <rect width="${ticketWidth}" height="${ticketHeight}" fill="white" />
+        <!-- Border overlay -->
         <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
-        <rect x="${barX}" y="0" width="${barW}" height="${ticketHeight}" fill="#1f2937" />
-        <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth * 0.8}" height="${ticketHeight}" preserveAspectRatio="xMidYMid meet" />
+        <!-- Right dark bar -->
+        <rect x="${rightBarX}" y="0" width="${rightBarW}" height="${ticketHeight}" fill="#1f2937" />
+        <!-- Logo area (left, top 85%) -->
+        <image href="${ticketLogoSrc}" x="0" y="0" width="${leftW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />
+        <!-- Barcode area (left, bottom 15%) -->
+        ${barcodeSvg}
+        <!-- Rotated code text in right bar -->
         <text
           x="${cx}"
           y="${cy}"
@@ -175,7 +287,15 @@ const SheetCard = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setDownloadCount((prev) => prev + 1);
+    const newCount = downloadCount + 1;
+    setDownloadCount(newCount);
+    try {
+      fetch('/api/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheet: { id: sheet.id, downloads: newCount } }),
+      }).catch(() => {});
+    } catch {}
   };
   
   const handleDownloadPdf = async () => {
@@ -209,7 +329,15 @@ const SheetCard = ({
       const imgData = canvas.toDataURL("image/png");
       doc.addImage(imgData, "PNG", 0, 0, 420, 297);
       doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
-      setDownloadCount((prev) => prev + 1);
+      const newCount = downloadCount + 1;
+      setDownloadCount(newCount);
+      try {
+        fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sheet: { id: sheet.id, downloads: newCount } }),
+        }).catch(() => {});
+      } catch {}
     };
 
     img.src = url;
@@ -378,16 +506,90 @@ export default function SheetsPage() {
   const sheetsByLevel = (level: Level) =>
     sheets.filter((sheet) => sheet.level === level);
 
+  // Hydrate from DB if available
+  useEffect(() => {
+    fetch('/api/sheets', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        const dbSheets: Sheet[] = (data?.sheets || []).map((s: any) => ({
+          ...s,
+          generationDate: new Date(s.generationDate),
+        }));
+        // only unassigned in inventory
+        setSheets(dbSheets.filter(s => !s.isAssigned));
+      })
+      .catch(() => {
+        // ignore; fallback remains mock
+      });
+  }, []);
+
+  const handleDownloadSelected = async () => {
+    // helper to download a single sheet as PDF
+    const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
+    const watermarkHref = await getPublicLogoDataUri();
+
+    for (const id of selectedSheets) {
+      const sheet = sheets.find(s => s.id === id);
+      if (!sheet) continue;
+      const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
+
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const scale = 12;
+      const canvasWidth = 420 * scale;
+      const canvasHeight = 297 * scale;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      const img = new Image();
+      const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+          URL.revokeObjectURL(url);
+          const imgData = canvas.toDataURL("image/png");
+          doc.addImage(imgData, "PNG", 0, 0, 420, 297);
+          doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
+          resolve();
+        };
+        img.src = url;
+      });
+
+      // Persist download count increment
+      const current = sheet.downloads || 0;
+      const next = current + 1;
+      try {
+        fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sheet: { id: sheet.id, downloads: next } }),
+        }).catch(() => {});
+      } catch {}
+
+      // reflect locally
+      setSheets(prev => prev.map(s => s.id === sheet.id ? { ...s, downloads: next } : s));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Sheet Inventory</h1>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          disabled={selectedSheets.length === 0}
-        >
-          Assign Selected ({selectedSheets.length})
-        </Button>
+        <div className="flex items-center gap-2">
+          {canDownload && selectedSheets.length > 1 && (
+            <Button variant="secondary" onClick={handleDownloadSelected}>
+              Download Selected (PDF)
+            </Button>
+          )}
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            disabled={selectedSheets.length === 0}
+          >
+            Assign Selected ({selectedSheets.length})
+          </Button>
+        </div>
       </div>
       <Tabs defaultValue="P">
         <TabsList>
