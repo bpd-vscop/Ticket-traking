@@ -1,5 +1,12 @@
 export type Level = "P" | "C" | "L" | "S" | "E";
 export const levels: Level[] = ["P", "C", "L", "S", "E"];
+export const levelLabels: Record<Level, string> = {
+  P: "Primaire",
+  C: "Collège",
+  L: "Lycée",
+  S: "Supérieur",
+  E: "Spéciale",
+};
 
 export type PackSize = 24 | 38;
 export const packSizes: PackSize[] = [24, 38];

@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getFamilies, getTeachers } from "@/lib/data";
-import { Family, Level, Teacher, levels } from "@/lib/types";
+import { Family, Level, Teacher, levelLabels, levels } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { BookUser, User, Users } from "lucide-react";
@@ -171,7 +171,7 @@ export default function FamiliesPage() {
         <TabsList>
           {levels.map((level) => (
             <TabsTrigger key={level} value={level}>
-              {level}
+               {levelLabels[level]}
             </TabsTrigger>
           ))}
         </TabsList>

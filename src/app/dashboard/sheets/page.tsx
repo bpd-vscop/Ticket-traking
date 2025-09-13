@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download, FileText, FileType } from "lucide-react";
 import { getSheets } from "@/lib/data";
-import { Level, Sheet, levels } from "@/lib/types";
+import { Level, Sheet, levels, levelLabels } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
 import {
   Dialog,
@@ -393,7 +393,7 @@ export default function SheetsPage() {
         <TabsList>
           {levels.map((level) => (
             <TabsTrigger key={level} value={level}>
-              {level}
+              {levelLabels[level]}
             </TabsTrigger>
           ))}
         </TabsList>

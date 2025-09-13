@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -332,8 +332,8 @@ export default function TicketsPage() {
             <Label>Level</Label>
             <div className="mt-2">
               <RadioGroup value={level} onValueChange={(v) => setLevel(v as Level)} className="flex flex-wrap gap-2">
-                {levels.map((l) => (
-                  <>
+                 {levels.map((l) => (
+                   <Fragment key={`level-${l}`}>
                     <RadioGroupItem key={`lvl-item-${l}`} value={l} id={`lvl-${l}`} className="sr-only" />
                     <Label
                       key={`lvl-label-${l}`}
@@ -347,8 +347,8 @@ export default function TicketsPage() {
                     >
                       {{ P: "Primaire", C: "Collège", L: "Lycée", S: "Supérieur", E: "Spéciale" }[l]}
                     </Label>
-                  </>
-                ))}
+                   </Fragment>
+                 ))}
               </RadioGroup>
             </div>
           </div>
@@ -362,8 +362,8 @@ export default function TicketsPage() {
                 onValueChange={(v) => setPackSize(Number(v) as PackSize)}
                 className="flex flex-wrap gap-2"
               >
-                {packSizes.map((s) => (
-                  <>
+                 {packSizes.map((s) => (
+                   <Fragment key={`ps-${s}`}>
                     <RadioGroupItem key={`ps-item-${s}`} value={String(s)} id={`ps-${s}`} className="sr-only" />
                     <Label
                       key={`ps-label-${s}`}
@@ -377,8 +377,8 @@ export default function TicketsPage() {
                     >
                       {s} Tickets
                     </Label>
-                  </>
-                ))}
+                   </Fragment>
+                 ))}
               </RadioGroup>
             </div>
           </div>
