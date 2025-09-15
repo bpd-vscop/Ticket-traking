@@ -129,9 +129,9 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
     const data = `*${sanitize(value)}*`;
     const narrow = 1;
     const wide = 3;
-    const quiet = 10; // replicate preview quiet zone
+    const quiet = 10; // modules (quiet zone = 10X)
 
-    // Build sequence of unit widths, starting/ending with quiet
+    // Build sequence of unit widths; begin with quiet as SPACE (handled in renderer)
     const seq: number[] = [quiet];
     let totalUnits = quiet;
     for (let i = 0; i < data.length; i++) {
@@ -143,23 +143,26 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
         seq.push(w);
         totalUnits += w;
       }
-      // inter-character narrow space
-      seq.push(narrow);
-      totalUnits += narrow;
+      // Inter-character narrow SPACE only between symbols (not after last)
+      if (i < data.length - 1) {
+        seq.push(narrow);
+        totalUnits += narrow;
+      }
     }
     seq.push(quiet);
     totalUnits += quiet;
 
-    // Margins inside barcode box (small, to mimic preview mx-1.5)
+    // Margins inside barcode box (small, to mimic preview)
     const margin = 0.5; // mm
-    const bx = x + margin +1;
+    const bx = x + margin;
     const by = y + margin;
     const bw = Math.max(0, width - margin * 2);
     const bh = Math.max(0, height - margin * 2);
     const unitW = bw / totalUnits;
 
     let cx = bx;
-    let drawBar = true;
+    // Start with SPACE so the leading quiet zone is blank
+    let drawBar = false;
     let svg = "";
     for (let i = 0; i < seq.length; i++) {
       const w = seq[i] * unitW;
@@ -202,7 +205,7 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
         <!-- Border overlay -->
         <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
         <!-- Right dark bar -->
-        <rect x="${rightBarX}" y="0" width="${rightBarW}" height="${ticketHeight}" fill="#1f2937" />
+        <rect x="${rightBarX}" y="0" width="${rightBarW}" height="${ticketHeight}" fill="#000000" />
         <!-- Logo area (left, top 85%) -->
         <image href="${ticketLogoSrc}" x="0" y="0" width="${leftW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />
         <!-- Barcode area (left, bottom 15%) -->

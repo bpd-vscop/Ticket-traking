@@ -164,7 +164,7 @@
   }
   .ticket__right {
     flex: 0 0 20%;
-    background: #1f2937; /* slate-800 */
+    background: #000000; /* slate-800 */
     color: white;
     display: flex;
     align-items: center;

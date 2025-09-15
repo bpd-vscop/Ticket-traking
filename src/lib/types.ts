@@ -8,8 +8,8 @@ export const levelLabels: Record<Level, string> = {
   E: "Spéciale",
 };
 
-export type PackSize = 24 | 38;
-export const packSizes: PackSize[] = [24, 38];
+export type PackSize = 24 | 36 | 38;
+export const packSizes: PackSize[] = [24, 36, 38];
 
 export type PaymentMethod = "cash" | "cheque" | "card";
 

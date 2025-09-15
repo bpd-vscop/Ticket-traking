@@ -78,6 +78,8 @@ function Barcode({ value }: { value: string }) {
   const wide = 3;
   const quiet = 10;
 
+  // Build sequence of unit widths (bars/spaces alternate starting with BAR).
+  // We prepend a quiet-zone SPACE by starting draw with drawBar=false.
   const seq: number[] = [quiet];
   let total = quiet;
   for (let i = 0; i < data.length; i++) {
@@ -89,15 +91,19 @@ function Barcode({ value }: { value: string }) {
       seq.push(w);
       total += w;
     }
-    seq.push(narrow);
-    total += narrow;
+    // Inter-character narrow SPACE only between symbols (not after last)
+    if (i < data.length - 1) {
+      seq.push(narrow);
+      total += narrow;
+    }
   }
   seq.push(quiet);
   total += quiet;
 
   let x = 0;
   const bars: JSX.Element[] = [];
-  let drawBar = true;
+  // Start with SPACE so the leading quiet zone is blank
+  let drawBar = false;
   for (let i = 0; i < seq.length; i++) {
     const w = seq[i];
     if (drawBar) {
@@ -170,7 +176,7 @@ const TicketPreviewWithEditor = ({
         </div>
 
         {/* Right bar with rotated reference */}
-        <div className="bg-slate-800 text-white flex items-center justify-center font-mono p-1 overflow-hidden">
+        <div className="bg-black text-white flex items-center justify-center font-mono p-1 overflow-hidden">
           <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
             {level}-{currentYear}XXX
           </p>
