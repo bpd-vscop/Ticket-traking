@@ -202,8 +202,6 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
       <g transform="translate(${x}, ${y})">
         <!-- Solid white background to cover watermark pattern under the ticket -->
         <rect width="${ticketWidth}" height="${ticketHeight}" fill="white" />
-        <!-- Border overlay -->
-        <rect width="${ticketWidth}" height="${ticketHeight}" fill="none" stroke="#ccc" stroke-dasharray="2" stroke-width="0.5"/>
         <!-- Right dark bar -->
         <rect x="${rightBarX}" y="0" width="${rightBarW}" height="${ticketHeight}" fill="#000000" />
         <!-- Logo area (left, top 85%) -->
@@ -230,6 +228,20 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
     `;
   }
 
+  // Single dashed grid overlay (avoids double-overlap borders)
+  const stroke = '#cccccc';
+  const strokeW = 0.5; // mm
+  const dash = '2 2';  // mm on/off
+  let gridSvg = '';
+  for (let c = 0; c <= cols; c++) {
+    const gx = c * ticketWidth;
+    gridSvg += `<line x1="${gx}" y1="0" x2="${gx}" y2="${gridHeight}" stroke="${stroke}" stroke-width="${strokeW}" stroke-dasharray="${dash}" stroke-linecap="butt" shape-rendering="geometricPrecision" />`;
+  }
+  for (let r = 0; r <= rows; r++) {
+    const gy = r * ticketHeight;
+    gridSvg += `<line x1="0" y1="${gy}" x2="${gridWidth}" y2="${gy}" stroke="${stroke}" stroke-width="${strokeW}" stroke-dasharray="${dash}" stroke-linecap="butt" shape-rendering="geometricPrecision" />`;
+  }
+
   const watermarkTile = 75.5;
   const watermarkStepY = watermarkTile * 0.866;
 
@@ -254,6 +266,8 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
       <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
       <g transform="translate(${marginLeft}, ${marginTop})">
         ${ticketsSvg}
+        <!-- Draw grid on top so dashes are even and single-layer -->
+        ${gridSvg}
       </g>
     </svg>
   `;
