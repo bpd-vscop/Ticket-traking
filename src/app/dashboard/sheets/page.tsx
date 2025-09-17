@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
+import JSZip from "jszip";
 import {
   Tabs,
   TabsContent,
@@ -515,6 +516,10 @@ export default function SheetsPage() {
     );
   };
 
+  const handleDeselectAll = () => {
+    setSelectedSheets([]);
+  };
+
   const handleAssign = () => {
     const assignedSheetIds = new Set(selectedSheets);
     setSheets(prev => prev.filter(s => !assignedSheetIds.has(s.id)));
@@ -547,17 +552,19 @@ export default function SheetsPage() {
       });
   }, []);
 
-  const handleDownloadSelected = async () => {
-    // helper to download a single sheet as PDF
+  const handleDownloadSelectedPDF = async () => {
     const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
     const watermarkHref = await getPublicLogoDataUri();
+
+    // Create a single PDF with multiple pages
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+    let isFirstPage = true;
 
     for (const id of selectedSheets) {
       const sheet = sheets.find(s => s.id === id);
       if (!sheet) continue;
-      const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
 
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+      const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       const scale = 12;
@@ -568,13 +575,18 @@ export default function SheetsPage() {
       const img = new Image();
       const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(svgBlob);
+
       await new Promise<void>((resolve) => {
         img.onload = () => {
+          if (!isFirstPage) {
+            doc.addPage();
+          }
+          isFirstPage = false;
+
           ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
           URL.revokeObjectURL(url);
           const imgData = canvas.toDataURL("image/png");
           doc.addImage(imgData, "PNG", 0, 0, 420, 297);
-          doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
           resolve();
         };
         img.src = url;
@@ -594,6 +606,49 @@ export default function SheetsPage() {
       // reflect locally
       setSheets(prev => prev.map(s => s.id === sheet.id ? { ...s, downloads: next } : s));
     }
+
+    // Save the multi-page PDF
+    doc.save(`sheets-bulk-${selectedSheets.length}-pages.pdf`);
+  };
+
+  const handleDownloadSelectedSVG = async () => {
+    const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
+    const watermarkHref = await getPublicLogoDataUri();
+    const zip = new JSZip();
+
+    for (const id of selectedSheets) {
+      const sheet = sheets.find(s => s.id === id);
+      if (!sheet) continue;
+
+      const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
+      const filename = `sheet-${sheet.level}-${sheet.startNumber}.svg`;
+      zip.file(filename, svgContent);
+
+      // Persist download count increment
+      const current = sheet.downloads || 0;
+      const next = current + 1;
+      try {
+        fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sheet: { id: sheet.id, downloads: next } }),
+        }).catch(() => {});
+      } catch {}
+
+      // reflect locally
+      setSheets(prev => prev.map(s => s.id === sheet.id ? { ...s, downloads: next } : s));
+    }
+
+    // Generate and download the ZIP file
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sheets-bulk-${selectedSheets.length}-files.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -602,9 +657,22 @@ export default function SheetsPage() {
         <h1 className="text-2xl font-bold">Sheet Inventory</h1>
         <div className="flex items-center gap-2">
           {canDownload && selectedSheets.length > 1 && (
-            <Button variant="secondary" onClick={handleDownloadSelected}>
-              Download Selected (PDF)
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Selected ({selectedSheets.length})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleDownloadSelectedPDF}>
+                  <FileType className="mr-2 h-4 w-4" /> Multi-page PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadSelectedSVG}>
+                  <FileText className="mr-2 h-4 w-4" /> SVG ZIP Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -676,6 +744,20 @@ export default function SheetsPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Footer with Deselect Button */}
+      {selectedSheets.length > 0 && (
+        <div className="flex justify-center mt-8 pt-6 border-t border-border">
+          <Button
+            variant="outline"
+            onClick={handleDeselectAll}
+            className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-600 focus:ring-red-500"
+          >
+            Deselect All ({selectedSheets.length})
+          </Button>
+        </div>
+      )}
+
       <AssignmentModal
         isOpen={isModalOpen}
         setIsOpen={setIsModalOpen}
