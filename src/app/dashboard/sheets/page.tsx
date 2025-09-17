@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download, FileText, FileType } from "lucide-react";
 import { getSheets } from "@/lib/data";
-import { Level, Sheet, levels, levelLabels } from "@/lib/types";
+import { Level, Sheet, levels, levelLabels, PackSize, packSizes } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
 import {
   Dialog,
@@ -505,6 +505,7 @@ export default function SheetsPage() {
   const [sheets, setSheets] = useState<Sheet[]>(getSheets().filter(s => !s.isAssigned));
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPackSize, setSelectedPackSize] = useState<PackSize | 'all'>('all');
 
   const canDownload = session?.user?.role === 'admin';
 
@@ -520,8 +521,13 @@ export default function SheetsPage() {
     setSelectedSheets([]);
   };
 
-  const sheetsByLevel = (level: Level) =>
-    sheets.filter((sheet) => sheet.level === level);
+  const sheetsByLevel = (level: Level) => {
+    const levelSheets = sheets.filter((sheet) => sheet.level === level);
+    if (selectedPackSize === 'all') {
+      return levelSheets;
+    }
+    return levelSheets.filter((sheet) => sheet.packSize === selectedPackSize);
+  };
 
   // Hydrate from DB if available
   useEffect(() => {
@@ -608,10 +614,40 @@ export default function SheetsPage() {
           </Button>
         </div>
       </div>
+      {/* Pack Size Tabs */}
+      <div className="flex justify-center mb-6">
+        <div className="flex gap-2 p-1 bg-muted rounded-lg">
+          <button
+            onClick={() => setSelectedPackSize('all')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              selectedPackSize === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+            }`}
+          >
+            All Sizes
+          </button>
+          {packSizes.map((size) => (
+            <button
+              key={size}
+              onClick={() => setSelectedPackSize(size)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedPackSize === size
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              {size} tickets
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Education Level Tabs */}
       <Tabs defaultValue="P">
-        <TabsList>
+        <TabsList className="w-full">
           {levels.map((level) => (
-            <TabsTrigger key={level} value={level}>
+            <TabsTrigger key={level} value={level} className="flex-1">
               {levelLabels[level]}
             </TabsTrigger>
           ))}

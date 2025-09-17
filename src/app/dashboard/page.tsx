@@ -13,11 +13,7 @@ import {
   BookUser,
   LayoutGrid,
   Users,
-  FileText,
-  Download,
-  TrendingUp,
   Calendar,
-  Shield,
   BarChart3
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,14 +22,11 @@ import { levelLabels } from "@/lib/types";
 
 type DashboardStats = {
   overview: {
-    totalSheets: number;
     unassignedSheets: number;
     totalFamilies: number;
     totalTeachers: number;
-    totalUsers?: number;
     recentSheets: number;
     totalTicketsGenerated: number;
-    totalDownloads: number;
   };
   charts: {
     sheetsByLevel: {
@@ -41,11 +34,6 @@ type DashboardStats = {
       total: number;
       assigned: number;
       unassigned: number;
-    }[];
-    topDownloadedSheets: {
-      displayName: string;
-      downloads: number;
-      level: string;
     }[];
   };
 };
@@ -79,8 +67,8 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="animate-pulse">
                 <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -120,20 +108,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sheets</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.totalSheets.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {overview.unassignedSheets} unassigned
-            </p>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
@@ -175,7 +150,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Secondary Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-1">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
@@ -188,38 +163,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.totalDownloads}</div>
-            <p className="text-xs text-muted-foreground">
-              Sheet downloads all time
-            </p>
-          </CardContent>
-        </Card>
-
-        {session?.user?.role === 'admin' && overview.totalUsers && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Users</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{overview.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">
-                Registered in system
-              </p>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Charts and Analytics */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-1">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -254,46 +201,6 @@ export default function DashboardPage() {
             })}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Most Downloaded Sheets
-            </CardTitle>
-            <CardDescription>
-              Top 5 sheets by download count
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {charts.topDownloadedSheets.length > 0 ? (
-              <div className="space-y-3">
-                {charts.topDownloadedSheets.map((sheet, index) => (
-                  <div key={sheet.displayName} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center text-xs">
-                        {index + 1}
-                      </Badge>
-                      <div>
-                        <p className="font-medium font-mono text-sm">{sheet.displayName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {levelLabels[sheet.level as keyof typeof levelLabels] || sheet.level}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">
-                      {sheet.downloads} downloads
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No downloads yet
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Welcome Section */}
@@ -318,7 +225,7 @@ export default function DashboardPage() {
             <div>
               <h4 className="font-semibold mb-2">System Overview</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• {overview.totalSheets} sheets containing {overview.totalTicketsGenerated} tickets</li>
+                <li>• {overview.totalTicketsGenerated} tickets generated</li>
                 <li>• {overview.unassignedSheets} sheets ready for assignment</li>
                 <li>• {overview.totalFamilies} active families enrolled</li>
                 <li>• {overview.totalTeachers} teachers available</li>

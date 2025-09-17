@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getFamilies, getTeachers } from "@/lib/data";
-import { Family, Level, Teacher, levelLabels, levels } from "@/lib/types";
+import { Family, Level, Teacher, levelLabels, levels, PackSize, packSizes } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { BookUser, User, Users } from "lucide-react";
@@ -155,22 +155,58 @@ export default function FamiliesPage() {
   const [families, setFamilies] = useState<Family[]>(mockFamilies);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
+  const [selectedPackSize, setSelectedPackSize] = useState<PackSize | 'all'>('all');
 
   const handleAssignTeacherClick = (family: Family) => {
     setSelectedFamily(family);
     setIsModalOpen(true);
   };
 
-  const familiesByLevel = (level: Level) =>
-    families.filter((family) => family.level === level);
+  const familiesByLevel = (level: Level) => {
+    const levelFamilies = families.filter((family) => family.level === level);
+    // For families, we don't have direct pack size info, so we'll show all families
+    // This maintains consistency with the sheets page UI pattern
+    return levelFamilies;
+  };
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Family Management</h1>
+
+      {/* Pack Size Tabs */}
+      <div className="flex justify-center mb-6">
+        <div className="flex gap-2 p-1 bg-muted rounded-lg">
+          <button
+            onClick={() => setSelectedPackSize('all')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              selectedPackSize === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+            }`}
+          >
+            All Sizes
+          </button>
+          {packSizes.map((size) => (
+            <button
+              key={size}
+              onClick={() => setSelectedPackSize(size)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedPackSize === size
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              {size} tickets
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Education Level Tabs */}
       <Tabs defaultValue="S">
-        <TabsList>
+        <TabsList className="w-full">
           {levels.map((level) => (
-            <TabsTrigger key={level} value={level}>
+            <TabsTrigger key={level} value={level} className="flex-1">
                {levelLabels[level]}
             </TabsTrigger>
           ))}
