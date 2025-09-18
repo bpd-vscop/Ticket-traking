@@ -11,6 +11,7 @@ type SheetInput = {
   downloads?: number;
   generationDate: string | Date;
   familyId?: string;
+  isDeleted?: boolean;
 };
 
 const COLLECTION = 'sheets';
@@ -22,7 +23,7 @@ export async function GET() {
     const col = db.collection(COLLECTION);
 
     const docs = await col
-      .find({}, { projection: { _id: 0 } })
+      .find({ isDeleted: { $ne: true } }, { projection: { _id: 0 } })
       .sort({ generationDate: -1 })
       .toArray();
 
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
       if (s.downloads !== undefined) setData.downloads = s.downloads;
       if (s.generationDate !== undefined) setData.generationDate = new Date(s.generationDate);
       if (s.familyId !== undefined) setData.familyId = s.familyId;
+      if (s.isDeleted !== undefined) setData.isDeleted = s.isDeleted;
 
       return {
         updateOne: {
@@ -78,5 +80,31 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error('POST /api/sheets error', err);
     return NextResponse.json({ error: 'Failed to save sheets' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Sheet ID is required' }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db();
+    const col = db.collection(COLLECTION);
+
+    const result = await col.deleteOne({ id: id });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'Sheet not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, deleted: true });
+  } catch (err) {
+    console.error('DELETE /api/sheets error', err);
+    return NextResponse.json({ error: 'Failed to delete sheet' }, { status: 500 });
   }
 }

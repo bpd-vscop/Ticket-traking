@@ -165,9 +165,9 @@ const TicketPreviewWithEditor = ({
         </div>
 
         {/* Reference text above barcode */}
-        <div className="absolute left-0 right-0" style={{ top: LOGO_AREA, height: REFERENCE_AREA }}>
+        <div className="absolute left-2 right-0" style={{ top: LOGO_AREA, height: REFERENCE_AREA }}>
           <div className="w-full h-full flex items-center justify-center">
-            <div className="text-[0.6rem] font-mono font-light text-center tracking-[0.5em] px-1.5">
+            <div className="text-[0.6rem] font-mono font-light text-center tracking-[1.5em] px-1.5">
               {level}-{currentYear}XXX
             </div>
           </div>

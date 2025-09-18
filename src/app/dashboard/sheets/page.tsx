@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, FileText, FileType } from "lucide-react";
+import { Download, FileText, FileType, MoreHorizontal, Trash2 } from "lucide-react";
 import { getSheets } from "@/lib/data";
 import { Level, Sheet, levels, levelLabels, PackSize, packSizes } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
@@ -36,6 +36,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -277,13 +288,19 @@ const SheetCard = ({
   isSelected,
   onSelect,
   canDownload,
+  onDelete,
 }: {
   sheet: Sheet;
   isSelected: boolean;
   onSelect: (id: string, checked: boolean) => void;
   canDownload: boolean;
+  onDelete: (id: string, deleteType: 'soft' | 'hard') => void;
 }) => {
   const [downloadCount, setDownloadCount] = useState(sheet.downloads);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false);
+  const [hardDeletePassword, setHardDeletePassword] = useState('');
+  const { toast } = useToast();
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
 
   const handleDownloadSvg = async () => {
@@ -357,22 +374,68 @@ const SheetCard = ({
     img.src = url;
   };
 
+  const handleSoftDelete = () => {
+    onDelete(sheet.id, 'soft');
+    setShowDeleteConfirm(false);
+    toast({
+      title: "Sheet Deleted",
+      description: "The sheet has been soft deleted and will no longer appear in the app.",
+    });
+  };
+
+  const handleHardDelete = () => {
+    if (hardDeletePassword === 'CONNECT-bpd') {
+      onDelete(sheet.id, 'hard');
+      setShowHardDeleteConfirm(false);
+      setHardDeletePassword('');
+      toast({
+        title: "Sheet Permanently Deleted",
+        description: "The sheet has been permanently removed from the database.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Invalid Password",
+        description: "Please enter the correct password to permanently delete.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <Card className={`transition-all ${isSelected ? 'border-primary ring-2 ring-primary' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex-1">
             <CardTitle className="font-mono">
               {sheet.level}-{currentYear}{String(sheet.startNumber).padStart(4, '0')} to {sheet.level}-{currentYear}{String(sheet.endNumber).padStart(4, '0')}
             </CardTitle>
             <CardDescription>{sheet.packSize} tickets</CardDescription>
           </div>
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={(checked) => onSelect(sheet.id, !!checked)}
-            className="mt-1"
-          />
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => onSelect(sheet.id, !!checked)}
+              className="mt-1"
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -407,6 +470,67 @@ const SheetCard = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </CardFooter>
+
+      {/* Soft Delete Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Sheet</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this sheet? This will hide it from the app but keep it in the database.
+              You can choose between soft delete (hide from app) or hard delete (permanently remove).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button onClick={handleSoftDelete} variant="destructive">
+              Soft Delete
+            </Button>
+            <Button
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setShowHardDeleteConfirm(true);
+              }}
+              variant="destructive"
+            >
+              Hard Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hard Delete with Password Confirmation */}
+      <AlertDialog open={showHardDeleteConfirm} onOpenChange={setShowHardDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete Sheet</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the sheet from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              type="password"
+              placeholder="Enter password to confirm"
+              value={hardDeletePassword}
+              onChange={(e) => setHardDeletePassword(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setHardDeletePassword('');
+              setShowHardDeleteConfirm(false);
+            }}>Cancel</AlertDialogCancel>
+            <Button
+              onClick={handleHardDelete}
+              variant="destructive"
+              disabled={hardDeletePassword !== 'CONNECT-bpd'}
+            >
+              Permanently Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
@@ -520,6 +644,40 @@ export default function SheetsPage() {
     const assignedSheetIds = new Set(selectedSheets);
     setSheets(prev => prev.filter(s => !assignedSheetIds.has(s.id)));
     setSelectedSheets([]);
+  };
+
+  const handleDelete = async (id: string, deleteType: 'soft' | 'hard') => {
+    try {
+      if (deleteType === 'soft') {
+        // Soft delete: mark as deleted but keep in database
+        await fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sheet: {
+              id: id,
+              isDeleted: true
+            }
+          }),
+        });
+        // Remove from local state (it won't appear in the app)
+        setSheets(prev => prev.filter(s => s.id !== id));
+      } else {
+        // Hard delete: remove from database completely
+        await fetch('/api/sheets', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id }),
+        });
+        // Remove from local state
+        setSheets(prev => prev.filter(s => s.id !== id));
+      }
+
+      // Remove from selected if it was selected
+      setSelectedSheets(prev => prev.filter(sheetId => sheetId !== id));
+    } catch (error) {
+      console.error('Failed to delete sheet:', error);
+    }
   };
 
   const sheetsByLevel = (level: Level) => {
@@ -727,6 +885,7 @@ export default function SheetsPage() {
                     isSelected={selectedSheets.includes(sheet.id)}
                     onSelect={handleSelectSheet}
                     canDownload={canDownload}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>
@@ -741,13 +900,13 @@ export default function SheetsPage() {
         ))}
       </Tabs>
 
-      {/* Footer with Deselect Button */}
+      {/* Fixed Footer with Deselect Button */}
       {selectedSheets.length > 0 && (
-        <div className="flex justify-center mt-8 pt-6 border-t border-border">
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
           <Button
             variant="outline"
             onClick={handleDeselectAll}
-            className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-600 focus:ring-red-500"
+            className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-600 focus:ring-red-500 shadow-lg"
           >
             Deselect All ({selectedSheets.length})
           </Button>
