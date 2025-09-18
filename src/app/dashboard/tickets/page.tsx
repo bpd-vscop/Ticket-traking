@@ -145,41 +145,41 @@ const TicketPreviewWithEditor = ({
     e.currentTarget.value = "";
   };
 
-  // Barcode area reduced by one third (from 20% -> ~13.333%)
+  // Reference text area above barcode
+  const REFERENCE_AREA = "5%";
   const BARCODE_AREA = "15%";
-  const LOGO_AREA = "85%";
+  const LOGO_AREA = "80%";
 
   return (
     <div className="relative w-full aspect-square flex items-center justify-center p-4 bg-muted rounded-lg">
       <input ref={fileRef} type="file" accept="image/*" onChange={handlePick} className="hidden" />
 
-      {/* Ticket card */}
-      <div className="relative w-[250px] h-[250px] bg-card shadow-lg overflow-hidden grid grid-cols-[4fr_1fr]">
-        {/* Left: logo + barcode area */}
-        <div className="relative">
-          {/* Logo region (taller now) */}
-          <div className="absolute inset-x-0 top-0" style={{ height: LOGO_AREA }}>
-            <div className="w-full h-full flex items-center justify-center p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoSrc} alt="Logo" className="w-full h-full object-contain" />
-            </div>
+      {/* Ticket card - now 4cm x 5cm ratio */}
+      <div className="relative w-[200px] h-[250px] bg-card shadow-lg overflow-hidden">
+        {/* Logo region */}
+        <div className="absolute inset-x-0 top-0" style={{ height: LOGO_AREA }}>
+          <div className="w-full h-full flex items-center justify-center p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoSrc} alt="Logo" className="w-full h-full object-contain" />
           </div>
+        </div>
 
-          {/* Barcode region: full width with small margins on all sides */}
-          <div className="absolute left-0 right-0 bottom-0" style={{ height: BARCODE_AREA }}>
-            <div className="w-full h-full flex items-centre justify-centre mx-1.5">
-              <div className="w-full h-full">
-                <Barcode value={`${level}-${currentYear}XXX`} />
-              </div>
+        {/* Reference text above barcode */}
+        <div className="absolute left-0 right-0" style={{ top: LOGO_AREA, height: REFERENCE_AREA }}>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-[0.6rem] font-mono font-light text-center tracking-[0.5em] px-1.5">
+              {level}-{currentYear}XXX
             </div>
           </div>
         </div>
 
-        {/* Right bar with rotated reference */}
-        <div className="bg-black text-white flex items-center justify-center font-mono p-1 overflow-hidden">
-          <p className="m-0 leading-none text-3xl font-bold tracking-widest [writing-mode:vertical-rl] rotate-180 origin-center">
-            {level}-{currentYear}XXX
-          </p>
+        {/* Barcode region at bottom */}
+        <div className="absolute left-0 right-0 bottom-0" style={{ height: BARCODE_AREA }}>
+          <div className="w-full h-full flex items-center justify-center px-1.5">
+            <div className="w-full h-full">
+              <Barcode value={`${level}-${currentYear}XXX`} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -256,7 +256,7 @@ const GenerationsSelector = ({
 };
 
 /* --------------------------------- Page ----------------------------------- */
-type CounterMap = Record<string, number>; // key: `${level}-${yy}` -> last used serial (1..9999)
+type CounterMap = Record<string, number>; // key: `${level}-${packSize}-${yy}` -> last used serial (1..9999)
 
 export default function TicketsPage() {
   const [level, setLevel] = useState<Level>("P");
@@ -293,7 +293,7 @@ export default function TicketsPage() {
     const sheets = getSheets();
     const latestCounters: CounterMap = {};
     sheets.forEach((sheet) => {
-      const key = `${sheet.level}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
+      const key = `${sheet.level}-${sheet.packSize}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
       const endNumber = sheet.endNumber;
       if (!latestCounters[key] || endNumber > latestCounters[key]) {
         latestCounters[key] = endNumber;
@@ -309,7 +309,7 @@ export default function TicketsPage() {
         const dbCounters: CounterMap = { ...latestCounters };
         (data?.sheets || []).forEach((s: any) => {
           const dt = new Date(s.generationDate);
-          const key = `${s.level}-${dt.getFullYear().toString().slice(-2)}`;
+          const key = `${s.level}-${s.packSize}-${dt.getFullYear().toString().slice(-2)}`;
           const endNumber = Number(s.endNumber) || 0;
           if (!dbCounters[key] || endNumber > dbCounters[key]) {
             dbCounters[key] = endNumber;
@@ -335,16 +335,16 @@ export default function TicketsPage() {
 
   const handleGenerate = () => {
     const yy = new Date().getFullYear().toString().slice(-2);
-    const key = `${level}-${yy}`;
+    const key = `${level}-${packSize}-${yy}`;
     const lastUsed = counters[key] ?? 0; // 0 => next is 1
 
-    // Prevent wrap within the same year
+    // Prevent wrap within the same year for this specific level+packSize combination
     const totalTickets = generations * packSize;
     const projectedEnd = lastUsed + totalTickets;
     if (projectedEnd > 9999) {
       toast({
         title: 'Generation exceeds yearly limit',
-        description: `Not enough remaining serials for ${level}-${yy}. Reduce quantity or wait for year change.`,
+        description: `Not enough remaining serials for ${level}-${packSize}-${yy}. Reduce quantity or wait for year change.`,
         variant: 'destructive',
       });
       return;
@@ -385,7 +385,7 @@ export default function TicketsPage() {
 
     toast({
       title: "Sheets Generated",
-      description: `${generations} sheet(s) for ${level}-${yy} (${packSize} tickets each) have been added to the inventory.`,
+      description: `${generations} sheet(s) for ${level}-${packSize}-${yy} (${packSize} tickets each) have been added to the inventory.`,
     });
   };
 

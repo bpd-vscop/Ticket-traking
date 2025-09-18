@@ -61,8 +61,8 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
   const { packSize, level } = sheet;
 
   // --- Layout Customization ---
-  const ticketWidth = 45; // 4.5cm
-  const ticketHeight = 45; // 4.5cm
+  const ticketWidth = 40; // 4cm
+  const ticketHeight = 50; // 5cm
   const sheetWidth = 420; // A3 landscape width
   const sheetHeight = 297; // A3 landscape height
   const cols = 8; // Fixed 8 columns
@@ -186,45 +186,41 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
     const nn = String(serial).padStart(4, "0");
     const code = `${level}-${currentYear}${nn}`;
 
-    // Dimensions matching preview layout
-    const rightBarX = ticketWidth * 0.8;
-    const rightBarW = ticketWidth * 0.2;
-    const leftW = ticketWidth * 0.8;
-    const barcodeH = ticketHeight * 0.15; // 15% of ticket height
-    const logoH = ticketHeight - barcodeH; // 85%
+    // New layout: no right bar, reference text above barcode
+    const referenceH = ticketHeight * 0.05; // 5% for reference text
+    const barcodeH = ticketHeight * 0.15; // 15% for barcode
+    const logoH = ticketHeight * 0.8; // 80% for logo
 
-    const cx = rightBarX + rightBarW / 2;
-    const cy = ticketHeight / 2;
+    // Build barcode SVG for bottom area (with 0.5mm margin)
+    const barcodeMargin = 0.5;
+    const barcodeSvg = code39BarsSvg(code, 0, ticketHeight - barcodeH, ticketWidth, barcodeH);
 
-    // Build barcode SVG for bottom of left area
-    const barcodeSvg = code39BarsSvg(code, 0, ticketHeight - barcodeH, leftW, barcodeH);
+    // Calculate the actual barcode width (accounting for margins) for reference text centering
+    const actualBarcodeWidth = ticketWidth - (barcodeMargin * 2);
+    const barcodeStartX = barcodeMargin;
 
     ticketsSvg += `
       <g transform="translate(${x}, ${y})">
         <!-- Solid white background to cover watermark pattern under the ticket -->
         <rect width="${ticketWidth}" height="${ticketHeight}" fill="white" />
-        <!-- Right dark bar -->
-        <rect x="${rightBarX}" y="0" width="${rightBarW}" height="${ticketHeight}" fill="#000000" />
-        <!-- Logo area (left, top 85%) -->
-        <image href="${ticketLogoSrc}" x="0" y="0" width="${leftW}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />
-        <!-- Barcode area (left, bottom 15%) -->
-        ${barcodeSvg}
-        <!-- Rotated code text in right bar -->
+        <!-- Logo area (top 80%) -->
+        <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />
+        <!-- Reference text area (above barcode) - centered with barcode margins -->
         <text
-          x="${cx}"
-          y="${cy}"
-          transform="rotate(180 ${cx} ${cy})"
-          fill="white"
+          x="${barcodeStartX + actualBarcodeWidth / 2 +1}"
+          y="${logoH + referenceH / 2}"
+          fill="#111827"
           font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
-          font-size="6"
-          font-weight="bold"
+          font-size="2"
+          font-weight="300"
           text-anchor="middle"
           dominant-baseline="central"
-          letter-spacing="1"
-          style="writing-mode: vertical-rl;"
+          letter-spacing="2"
         >
           ${code}
         </text>
+        <!-- Barcode area (bottom 15%) -->
+        ${barcodeSvg}
       </g>
     `;
   }
