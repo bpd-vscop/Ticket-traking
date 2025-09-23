@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, FileText, FileType, MoreHorizontal, Trash2, Grid3X3, LayoutGrid, Table } from "lucide-react";
+import { Download, FileText, FileType, MoreHorizontal, Trash2, Grid3X3, LayoutGrid, Table, ArrowLeft } from "lucide-react";
 import { getSheets } from "@/lib/data";
 import { Level, Sheet, levels, levelLabels, PackSize, packSizes, levelRates, Family } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
@@ -805,140 +805,182 @@ const AssignmentModal = ({
   const selectedFamily = families.find(f => f.id === selectedFamilyId);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[600px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Assign Sheets to Family</DialogTitle>
-            <DialogDescription>
-              You are assigning {sheets.length} sheet(s) with {totalTickets} total tickets.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Sheet Summary */}
-            <div className="bg-muted p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Assignment Summary</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p><strong>Sheets:</strong> {sheets.length}</p>
-                  <p><strong>Total Tickets:</strong> {totalTickets}</p>
-                  <p><strong>Education Level:</strong> {levelLabels[sheetLevel as Level]}</p>
-                </div>
-                <div>
-                  <p><strong>Rate per Ticket:</strong> {effectiveRate} MAD {isVariableRate && '(Variable)'}</p>
-                  <p><strong>Subtotal:</strong> {totalTickets * effectiveRate} MAD</p>
-                  <p><strong>After Reduction:</strong> {totalAmount} MAD</p>
-                </div>
-              </div>
-            </div>
+    <>
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/50 transition-opacity duration-500 ease-in-out ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{
+          position: 'fixed',
+          top: -30,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 48
+        }}
+      />
 
-            {/* Family Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="family">Select Family *</Label>
-              <Select value={selectedFamilyId} onValueChange={setSelectedFamilyId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose an existing family" />
-                </SelectTrigger>
-                <SelectContent>
-                  {families.map(family => {
-                    const students = family.students;
-                    const isNewFormat = students && students.length > 0 && typeof students[0] === 'object';
-
-                    let displayName;
-                    if (isNewFormat) {
-                      const studentInfos = students as any[];
-                      displayName = studentInfos.length > 1
-                        ? `${studentInfos[0].firstName} ${studentInfos[0].lastName} (+${studentInfos.length - 1} more)`
-                        : `${studentInfos[0].firstName} ${studentInfos[0].lastName}`;
-                    } else {
-                      const studentNames = (students as any) || (family.student ? [family.student] : []);
-                      displayName = studentNames.length > 1
-                        ? `${studentNames[0]} (+${studentNames.length - 1} more)`
-                        : studentNames[0] || 'No students';
-                    }
-
-                    return (
-                      <SelectItem key={family.id} value={family.id}>
-                        {displayName} - {levelLabels[family.level]}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Variable Rate for Spéciale */}
-            {isVariableRate && (
-              <div className="space-y-2">
-                <Label htmlFor="custom-rate">Custom Rate for Spéciale (MAD) *</Label>
-                <Input
-                  id="custom-rate"
-                  type="number"
-                  value={customRate}
-                  onChange={(e) => setCustomRate(Number(e.target.value))}
-                  min="100"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">Minimum 100 MAD per ticket</p>
-              </div>
-            )}
-
-            {/* Reduction */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="reduction">Reduction (MAD)</Label>
-                <Input
-                  id="reduction"
-                  type="number"
-                  value={reduction}
-                  onChange={(e) => setReduction(Number(e.target.value))}
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reduction-reason">Reduction Reason</Label>
-                <Input
-                  id="reduction-reason"
-                  value={reductionReason}
-                  onChange={(e) => setReductionReason(e.target.value)}
-                  placeholder="e.g., Sibling discount"
-                  disabled={reduction === 0}
-                />
-              </div>
-            </div>
-
-            {/* Selected Family Info */}
-            {selectedFamily && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">Selected Family Details</h4>
-                <div className="text-sm space-y-1">
-                  <p><strong>Students:</strong> {(selectedFamily.students || [selectedFamily.student || '']).filter(Boolean).join(', ')}</p>
-                  <p><strong>Parents:</strong> {[selectedFamily.parents.father, selectedFamily.parents.mother].filter(Boolean).join(' & ')}</p>
-                  <p><strong>Contact:</strong> {selectedFamily.contact?.phone || selectedFamily.contact?.email || 'No contact info'}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Final Total */}
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Total Amount:</span>
-                <span className="text-xl font-bold text-green-700">{totalAmount} MAD</span>
-              </div>
+      {/* Slide-in Panel */}
+      <div className={`fixed top-20 right-4 bottom-6 bg-white shadow-2xl transform transition-transform duration-500 ease-in-out rounded-lg ${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
+      }`}
+      style={{ zIndex: 49 }}>
+        <div className="h-full flex flex-col relative">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                onClick={() => setIsOpen(false)}
+                className="p-4"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              <h2 className="text-xl font-semibold">Assign Sheets to Family</h2>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!selectedFamilyId}>
-              Assign Sheets
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 pb-20">
+            <form id="assign-sheets-form" onSubmit={handleSubmit} className="space-y-6">
+              <div className="text-sm text-muted-foreground mb-4">
+                You are assigning {sheets.length} sheet(s) with {totalTickets} total tickets.
+              </div>
+
+              {/* Sheet Summary */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Assignment Summary</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Sheets:</strong> {sheets.length}</p>
+                    <p><strong>Total Tickets:</strong> {totalTickets}</p>
+                    <p><strong>Education Level:</strong> {levelLabels[sheetLevel as Level]}</p>
+                  </div>
+                  <div>
+                    <p><strong>Rate per Ticket:</strong> {effectiveRate} MAD {isVariableRate && '(Variable)'}</p>
+                    <p><strong>Subtotal:</strong> {totalTickets * effectiveRate} MAD</p>
+                    <p><strong>After Reduction:</strong> {totalAmount} MAD</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Family Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="family">Select Family *</Label>
+                <Select value={selectedFamilyId} onValueChange={setSelectedFamilyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an existing family" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {families.map(family => {
+                      const students = family.students;
+                      const isNewFormat = students && students.length > 0 && typeof students[0] === 'object';
+
+                      let displayName;
+                      if (isNewFormat) {
+                        const studentInfos = students as any[];
+                        displayName = studentInfos.length > 1
+                          ? `${studentInfos[0].firstName} ${studentInfos[0].lastName} (+${studentInfos.length - 1} more)`
+                          : `${studentInfos[0].firstName} ${studentInfos[0].lastName}`;
+                      } else {
+                        const studentNames = (students as any) || (family.student ? [family.student] : []);
+                        displayName = studentNames.length > 1
+                          ? `${studentNames[0]} (+${studentNames.length - 1} more)`
+                          : studentNames[0] || 'No students';
+                      }
+
+                      return (
+                        <SelectItem key={family.id} value={family.id}>
+                          {displayName} - {levelLabels[family.level]}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Variable Rate for Spéciale */}
+              {isVariableRate && (
+                <div className="space-y-2">
+                  <Label htmlFor="custom-rate">Custom Rate for Spéciale (MAD) *</Label>
+                  <Input
+                    id="custom-rate"
+                    type="number"
+                    value={customRate}
+                    onChange={(e) => setCustomRate(Number(e.target.value))}
+                    min="100"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Minimum 100 MAD per ticket</p>
+                </div>
+              )}
+
+              {/* Reduction */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reduction">Reduction (MAD)</Label>
+                  <Input
+                    id="reduction"
+                    type="number"
+                    value={reduction}
+                    onChange={(e) => setReduction(Number(e.target.value))}
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reduction-reason">Reduction Reason</Label>
+                  <Input
+                    id="reduction-reason"
+                    value={reductionReason}
+                    onChange={(e) => setReductionReason(e.target.value)}
+                    placeholder="e.g., Sibling discount"
+                    disabled={reduction === 0}
+                  />
+                </div>
+              </div>
+
+              {/* Selected Family Info */}
+              {selectedFamily && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Selected Family Details</h4>
+                  <div className="text-sm space-y-1">
+                    <p><strong>Students:</strong> {(selectedFamily.students || [selectedFamily.student || '']).filter(Boolean).join(', ')}</p>
+                    <p><strong>Parents:</strong> {[selectedFamily.parents.father, selectedFamily.parents.mother].filter(Boolean).join(' & ')}</p>
+                    <p><strong>Contact:</strong> {selectedFamily.contact?.phone || selectedFamily.contact?.email || 'No contact info'}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Final Total */}
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Total Amount:</span>
+                  <span className="text-xl font-bold text-green-700">{totalAmount} MAD</span>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Fixed Footer */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white border-t p-6 rounded-b-lg">
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" form="assign-sheets-form" disabled={!selectedFamilyId}>
+                Assign Sheets
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
