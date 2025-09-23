@@ -111,9 +111,117 @@ export type Family = {
   student?: string; // Will be migrated to students array
 };
 
+// Subjects by education level
+export const subjectsByLevel: Record<Level, string[]> = {
+  P: [
+    "Français",
+    "Arabe",
+    "Mathématiques",
+    "Sciences de la vie et de la terre (SVT)",
+    "Histoire – Géographie",
+    "Éducation islamique",
+    "Informatique",
+    "Autre"
+  ], // Primaire
+  C: [
+    "Français",
+    "Arabe",
+    "Anglais",
+    "Mathématiques",
+    "Sciences physiques et chimiques",
+    "Sciences de la vie et de la terre (SVT)",
+    "Histoire – Géographie",
+    "Éducation islamique",
+    "Éducation artistique",
+    "Technologie / Informatique",
+    "Autre"
+  ], // Collège
+  L: [
+    "Français",
+    "Arabe",
+    "Anglais",
+    "Mathématiques",
+    "Sciences de la vie et de la terre (SVT)",
+    "Sciences physiques et chimiques",
+    "Histoire – Géographie",
+    "Philosophie",
+    "Éducation islamique",
+    "Physique – Chimie",
+    "Informatique",
+    "Espagnol",
+    "Autre"
+  ], // Lycée
+  S: [
+    "Mathématiques",
+    "Informatique",
+    "Physique",
+    "Chimie",
+    "Biologie",
+    "Géologie",
+    "Statistiques",
+    "Économie appliquée",
+    "Littérature arabe",
+    "Littérature française",
+    "Histoire",
+    "Géographie",
+    "Philosophie",
+    "Études islamiques",
+    "Sociologie",
+    "Psychologie",
+    "Droit civil",
+    "Droit constitutionnel",
+    "Droit commercial",
+    "Sciences politiques",
+    "Micro-économie",
+    "Macro-économie",
+    "Comptabilité",
+    "Gestion",
+    "Anglais",
+    "Espagnol",
+    "Allemand",
+    "Traduction",
+    "Linguistique",
+    "Civilisation",
+    "Intelligence artificielle",
+    "Big data",
+    "Réseaux",
+    "Développement logiciel",
+    "Finance",
+    "Marketing",
+    "Management",
+    "Logistique",
+    "Génie civil",
+    "Génie mécanique",
+    "Génie électrique",
+    "Génie industriel",
+    "Autre"
+  ], // Supérieur
+  E: [
+    "Mathématiques",
+    "Physique",
+    "Chimie",
+    "Sciences de l'ingénieur",
+    "Informatique",
+    "Médecine",
+    "Pharmacie",
+    "Dentaire",
+    "Autre"
+  ] // Spéciale
+};
+
+export type TeacherSubjectAssignment = {
+  level: Level;
+  subjects: string[];
+};
+
 export type Teacher = {
   id: string;
   name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  specializations: TeacherSubjectAssignment[];
+  notes?: string;
 };
 
 export type User = {

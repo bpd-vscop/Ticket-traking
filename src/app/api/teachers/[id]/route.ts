@@ -17,20 +17,37 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
   }
 
   try {
-    const { name } = await request.json();
+    const { name, email, phone, address, specializations, notes } = await request.json();
+
     if (!name) {
       return NextResponse.json({ message: 'Missing required field: name' }, { status: 400 });
     }
 
+    if (!specializations || specializations.length === 0) {
+      return NextResponse.json({ message: 'At least one specialization is required' }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db();
-    const result = await db.collection('teachers').updateOne({ id }, { $set: { name } });
+
+    const updateData = {
+      name,
+      email: email || undefined,
+      phone: phone || undefined,
+      address: address || undefined,
+      specializations,
+      notes: notes || undefined,
+    };
+
+    const result = await db.collection('teachers').updateOne({ id }, { $set: updateData });
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ message: 'Teacher not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Teacher updated successfully' });
+    // Return the updated teacher
+    const updatedTeacher = await db.collection('teachers').findOne({ id });
+    return NextResponse.json(updatedTeacher);
   } catch (error) {
     console.error(`Error updating teacher ${id}:`, error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

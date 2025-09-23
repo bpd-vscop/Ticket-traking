@@ -29,7 +29,15 @@ import { Family, Level, Teacher, StudentInfo, levelLabels, levels, subLevels } f
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { BookUser, User, Users, Plus, X, Edit, Search, Filter, ArrowLeft } from "lucide-react";
+import { BookUser, User, Users, Plus, X, Edit, Search, Filter, ArrowLeft, Grid3X3, LayoutGrid, Table } from "lucide-react";
+import {
+  Table as TableComponent,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 
 const AddFamilyModal = ({
@@ -609,6 +617,174 @@ const TeacherAssignmentModal = ({
   );
 };
 
+const CompactFamilyCard = ({
+  family,
+  onAssignTeacher,
+  allTeachers,
+}: {
+  family: Family;
+  onAssignTeacher: (family: Family) => void;
+  allTeachers: Teacher[];
+}) => {
+  const teachers = allTeachers.filter(t => family.teacherIds.includes(t.id));
+  const students = family.students;
+  const isNewFormat = students && students.length > 0 && typeof students[0] === 'object';
+
+  let displayName;
+  if (isNewFormat) {
+    const studentInfos = students as StudentInfo[];
+    displayName = studentInfos.length > 1
+      ? `${studentInfos[0].firstName} ${studentInfos[0].lastName} (+${studentInfos.length - 1})`
+      : `${studentInfos[0].firstName} ${studentInfos[0].lastName}`;
+  } else {
+    const studentNames = (students as unknown as string[]) || (family.student ? [family.student] : []);
+    displayName = studentNames.length > 1
+      ? `${studentNames[0]} (+${studentNames.length - 1})`
+      : studentNames[0] || 'No students';
+  }
+
+  return (
+    <Card className="h-auto">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <CardTitle className="text-sm">{displayName}</CardTitle>
+            <Badge variant="outline" className="text-xs mt-1">
+              {levelLabels[family.level]}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-1">
+          {family.contact && (family.contact.phone || family.contact.email) && (
+            <div className="text-xs text-muted-foreground">
+              {family.contact.phone && <div>📞 {family.contact.phone}</div>}
+            </div>
+          )}
+          <div className="text-xs">
+            <span className="text-muted-foreground">Teachers: </span>
+            {teachers.length > 0 ? (
+              <span>{teachers.length}</span>
+            ) : (
+              <span className="text-muted-foreground">None</span>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs"
+          onClick={() => onAssignTeacher(family)}
+        >
+          Manage
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const FamiliesTableView = ({
+  families,
+  onAssignTeacher,
+  allTeachers,
+}: {
+  families: Family[];
+  onAssignTeacher: (family: Family) => void;
+  allTeachers: Teacher[];
+}) => {
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <TableComponent>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Student(s)</TableHead>
+              <TableHead>Parents</TableHead>
+              <TableHead>Level</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Teachers</TableHead>
+              <TableHead className="w-24">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {families.map((family) => {
+              const teachers = allTeachers.filter(t => family.teacherIds.includes(t.id));
+              const students = family.students;
+              const isNewFormat = students && students.length > 0 && typeof students[0] === 'object';
+
+              let displayName;
+              if (isNewFormat) {
+                const studentInfos = students as StudentInfo[];
+                displayName = studentInfos.length > 1
+                  ? `${studentInfos[0].firstName} ${studentInfos[0].lastName} (+${studentInfos.length - 1} more)`
+                  : `${studentInfos[0].firstName} ${studentInfos[0].lastName}`;
+              } else {
+                const studentNames = (students as unknown as string[]) || (family.student ? [family.student] : []);
+                displayName = studentNames.length > 1
+                  ? `${studentNames[0]} (+${studentNames.length - 1} more)`
+                  : studentNames[0] || 'No students';
+              }
+
+              return (
+                <TableRow key={family.id}>
+                  <TableCell className="font-medium">{displayName}</TableCell>
+                  <TableCell className="text-sm">
+                    {family.parents.father && typeof family.parents.father === 'object'
+                      ? `${family.parents.father.firstName} ${family.parents.father.lastName}`
+                      : family.parents.father
+                    }
+                    {family.parents.mother && (
+                      ` & ${typeof family.parents.mother === 'object'
+                        ? `${family.parents.mother.firstName} ${family.parents.mother.lastName}`
+                        : family.parents.mother
+                      }`
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {levelLabels[family.level]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {family.contact?.phone && <div>📞 {family.contact.phone}</div>}
+                    {family.contact?.email && <div>✉️ {family.contact.email}</div>}
+                    {!family.contact?.phone && !family.contact?.email && '-'}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {teachers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {teachers.map(t => (
+                          <Badge key={t.id} variant="secondary" className="text-xs">
+                            {t.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">None</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onAssignTeacher(family)}
+                    >
+                      Manage
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </TableComponent>
+      </CardContent>
+    </Card>
+  );
+};
+
 const FamilyCard = ({
   family,
   onAssignTeacher,
@@ -728,6 +904,8 @@ const FamilyCard = ({
   );
 };
 
+type ViewMode = 'cards' | 'compact' | 'table';
+
 export default function FamiliesPage() {
   const [families, setFamilies] = useState<Family[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -735,6 +913,7 @@ export default function FamiliesPage() {
   const [isAddFamilyModalOpen, setIsAddFamilyModalOpen] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [filters, setFilters] = useState({
     level: 'all' as Level | 'all',
     searchTerm: '',
@@ -839,6 +1018,54 @@ export default function FamiliesPage() {
     });
   };
 
+  const renderFamiliesView = () => {
+    const filteredFamiliesList = filteredFamilies();
+
+    if (filteredFamiliesList.length === 0) {
+      return (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              {families.length === 0
+                ? "No families found. Add your first family to get started."
+                : "No families match the current filters. Try adjusting your search or filter criteria."
+              }
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (viewMode === 'table') {
+      return (
+        <FamiliesTableView
+          families={filteredFamiliesList}
+          onAssignTeacher={handleAssignTeacherClick}
+          allTeachers={teachers}
+        />
+      );
+    }
+
+    const gridClass = viewMode === 'compact'
+      ? 'grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3'
+      : 'grid md:grid-cols-2 lg:grid-cols-3 gap-4';
+
+    const CardComponent = viewMode === 'compact' ? CompactFamilyCard : FamilyCard;
+
+    return (
+      <div className={gridClass}>
+        {filteredFamiliesList.map((family) => (
+          <CardComponent
+            key={family.id}
+            family={family}
+            onAssignTeacher={handleAssignTeacherClick}
+            allTeachers={teachers}
+          />
+        ))}
+      </div>
+    );
+  };
+
   const handleSaveTeacher = async (familyId: string, teacherIds: string[]) => {
     try {
       const response = await fetch('/api/families', {
@@ -916,10 +1143,39 @@ export default function FamiliesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Family Management</h1>
-        <Button onClick={handleAddFamilyClick} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Family
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="h-8 w-8 p-0"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'compact' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('compact')}
+              className="h-8 w-8 p-0"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-8 w-8 p-0"
+            >
+              <Table className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={handleAddFamilyClick} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Family
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -980,30 +1236,8 @@ export default function FamiliesPage() {
         </CardContent>
       </Card>
 
-      {/* Family Cards */}
-      {filteredFamilies().length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFamilies().map((family) => (
-            <FamilyCard
-              key={family.id}
-              family={family}
-              onAssignTeacher={handleAssignTeacherClick}
-              allTeachers={teachers}
-            />
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              {families.length === 0
-                ? "No families found. Add your first family to get started."
-                : "No families match the current filters. Try adjusting your search or filter criteria."
-              }
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Family Views */}
+      {renderFamiliesView()}
 
       <AddFamilyModal
         isOpen={isAddFamilyModalOpen}

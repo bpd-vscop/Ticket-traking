@@ -31,10 +31,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name } = await request.json();
+    const { name, email, phone, address, specializations, notes } = await request.json();
 
     if (!name) {
       return NextResponse.json({ message: 'Missing required field: name' }, { status: 400 });
+    }
+
+    if (!specializations || specializations.length === 0) {
+      return NextResponse.json({ message: 'At least one specialization is required' }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -43,6 +47,11 @@ export async function POST(request: Request) {
     const newTeacher: Teacher = {
       id: `teacher-${Date.now()}`,
       name,
+      email: email || undefined,
+      phone: phone || undefined,
+      address: address || undefined,
+      specializations,
+      notes: notes || undefined,
     };
 
     await db.collection('teachers').insertOne(newTeacher);

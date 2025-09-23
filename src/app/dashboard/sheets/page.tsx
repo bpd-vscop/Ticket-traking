@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, FileText, FileType, MoreHorizontal, Trash2 } from "lucide-react";
+import { Download, FileText, FileType, MoreHorizontal, Trash2, Grid3X3, LayoutGrid, Table } from "lucide-react";
 import { getSheets } from "@/lib/data";
 import { Level, Sheet, levels, levelLabels, PackSize, packSizes, levelRates, Family } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
@@ -48,6 +48,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Table as TableComponent,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -290,6 +298,155 @@ const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: st
 
 
 import { useSession } from "next-auth/react";
+const CompactSheetCard = ({
+  sheet,
+  isSelected,
+  onSelect,
+  canDownload,
+  onDelete,
+}: {
+  sheet: Sheet;
+  isSelected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
+  canDownload: boolean;
+  onDelete: (id: string, deleteType: 'soft' | 'hard') => void;
+}) => {
+  return (
+    <Card className="h-auto">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => onSelect(sheet.id, checked as boolean)}
+            />
+            <CardTitle className="text-sm">{sheet.packSize} tickets</CardTitle>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {canDownload && (
+                <>
+                  <DropdownMenuItem onClick={() => {}}>
+                    <Download className="mr-2 h-3 w-3" /> Download PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {}}>
+                    <FileText className="mr-2 h-3 w-3" /> Download SVG
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuItem
+                onClick={() => onDelete(sheet.id, 'soft')}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-3 w-3" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p>Level: {levelLabels[sheet.level]}</p>
+          <p>Generated: {formatDistanceToNow(new Date(sheet.generationDate), { addSuffix: true })}</p>
+          {sheet.familyId && <p>Family: {sheet.familyId}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const SheetsTableView = ({
+  sheets,
+  selectedSheets,
+  onSelect,
+  canDownload,
+  onDelete,
+}: {
+  sheets: Sheet[];
+  selectedSheets: string[];
+  onSelect: (id: string, checked: boolean) => void;
+  canDownload: boolean;
+  onDelete: (id: string, deleteType: 'soft' | 'hard') => void;
+}) => {
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <TableComponent>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={sheets.length > 0 && selectedSheets.length === sheets.length}
+                  onCheckedChange={(checked) => {
+                    sheets.forEach(sheet => onSelect(sheet.id, checked as boolean));
+                  }}
+                />
+              </TableHead>
+              <TableHead>Pack Size</TableHead>
+              <TableHead>Level</TableHead>
+              <TableHead>Generated</TableHead>
+              <TableHead>Family</TableHead>
+              <TableHead className="w-12">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sheets.map((sheet) => (
+              <TableRow key={sheet.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedSheets.includes(sheet.id)}
+                    onCheckedChange={(checked) => onSelect(sheet.id, checked as boolean)}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">{sheet.packSize} tickets</TableCell>
+                <TableCell>{levelLabels[sheet.level]}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {formatDistanceToNow(new Date(sheet.generationDate), { addSuffix: true })}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {sheet.familyId || '-'}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {canDownload && (
+                        <>
+                          <DropdownMenuItem onClick={() => {}}>
+                            <Download className="mr-2 h-4 w-4" /> Download PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {}}>
+                            <FileText className="mr-2 h-4 w-4" /> Download SVG
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => onDelete(sheet.id, 'soft')}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableComponent>
+      </CardContent>
+    </Card>
+  );
+};
+
 const SheetCard = ({
   sheet,
   isSelected,
@@ -785,12 +942,15 @@ const AssignmentModal = ({
   );
 };
 
+type ViewMode = 'cards' | 'compact' | 'table';
+
 export default function SheetsPage() {
   const { data: session } = useSession();
   const [sheets, setSheets] = useState<Sheet[]>(getSheets().filter(s => !s.isAssigned));
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPackSize, setSelectedPackSize] = useState<PackSize | 'all'>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   const canDownload = session?.user?.role === 'admin';
 
@@ -850,6 +1010,51 @@ export default function SheetsPage() {
       return levelSheets;
     }
     return levelSheets.filter((sheet) => sheet.packSize === selectedPackSize);
+  };
+
+  const renderSheetsView = (levelSheets: Sheet[]) => {
+    if (levelSheets.length === 0) {
+      return (
+        <Card className="mt-4">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">No unassigned sheets for this level.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (viewMode === 'table') {
+      return (
+        <SheetsTableView
+          sheets={levelSheets}
+          selectedSheets={selectedSheets}
+          onSelect={handleSelectSheet}
+          canDownload={canDownload}
+          onDelete={handleDelete}
+        />
+      );
+    }
+
+    const gridClass = viewMode === 'compact'
+      ? 'grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3'
+      : 'grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+    const CardComponent = viewMode === 'compact' ? CompactSheetCard : SheetCard;
+
+    return (
+      <div className={gridClass}>
+        {levelSheets.map((sheet) => (
+          <CardComponent
+            key={sheet.id}
+            sheet={sheet}
+            isSelected={selectedSheets.includes(sheet.id)}
+            onSelect={handleSelectSheet}
+            canDownload={canDownload}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+    );
   };
 
   // Hydrate from DB if available
@@ -992,7 +1197,35 @@ export default function SheetsPage() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Sheet Inventory</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="h-8 w-8 p-0"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'compact' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('compact')}
+              className="h-8 w-8 p-0"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-8 w-8 p-0"
+            >
+              <Table className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
           {canDownload && selectedSheets.length > 1 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1017,6 +1250,7 @@ export default function SheetsPage() {
           >
             Assign Selected ({selectedSheets.length})
           </Button>
+        </div>
         </div>
       </div>
       {/* Pack Size Tabs */}
@@ -1065,26 +1299,7 @@ export default function SheetsPage() {
         </TabsList>
         {levels.map((level) => (
           <TabsContent key={level} value={level}>
-            {sheetsByLevel(level).length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {sheetsByLevel(level).map((sheet) => (
-                  <SheetCard
-                    key={sheet.id}
-                    sheet={sheet}
-                    isSelected={selectedSheets.includes(sheet.id)}
-                    onSelect={handleSelectSheet}
-                    canDownload={canDownload}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            ) : (
-              <Card className="mt-4">
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">No unassigned sheets for this level.</p>
-                </CardContent>
-              </Card>
-            )}
+            {renderSheetsView(sheetsByLevel(level))}
           </TabsContent>
         ))}
       </Tabs>

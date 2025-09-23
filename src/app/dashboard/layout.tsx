@@ -28,6 +28,7 @@ import {
   Settings,
   Menu,
   X,
+  BookUser,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/dashboard/tickets", icon: Ticket, label: "Generate Tickets", adminOnly: true },
   { href: "/dashboard/sheets", icon: LayoutGrid, label: "Sheets" },
   { href: "/dashboard/families", icon: Users, label: "Families" },
+  { href: "/dashboard/teachers", icon: BookUser, label: "Teachers" },
   { href: "/dashboard/packs", icon: PackageCheck, label: "Packs" },
   { href: "/dashboard/users", icon: Shield, label: "Users", adminOnly: true },
 ];
