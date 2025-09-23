@@ -1,4 +1,4 @@
-import type { Sheet, Family, Teacher, User, Level } from './types';
+import type { Sheet, Family, Teacher, User, Level, StudentInfo } from './types';
 
 let mockTeachers: Teacher[] = [
   { id: 'teacher-1', name: 'Dr. Evelyn Reed' },
@@ -19,34 +19,70 @@ let mockFamilies: Family[] = [
     id: 'family-1',
     sheetIds: ['sheet-1', 'sheet-2'],
     level: 'S',
-    parents: { father: 'Marc Dupuis' },
-    student: 'Leo Dupuis',
-    subjects: [{ name: 'Mathematics', hours: 2 }, { name: 'Physics', hours: 1.5 }],
-    packDetails: { hourlyRate: 40, reduction: 10, reductionReason: 'Sibling discount', total: 260 },
-    payments: [{ method: 'card', amount: 260 }],
+    parents: {
+      father: { firstName: 'Marc', lastName: 'Dupuis' },
+      mother: { firstName: 'Claire', lastName: 'Dupuis' },
+      lastName: 'Dupuis'
+    },
+    students: [
+      { firstName: 'Leo', lastName: 'Dupuis', level: 'S', subLevel: 'Licence 2 (L2) – 2ᵉ année universitaire' },
+      { firstName: 'Emma', lastName: 'Dupuis', level: 'L', subLevel: '1ʳᵉ année baccalauréat (11ᵉ année)' }
+    ] as StudentInfo[],
+    subjects: [{ name: 'Mathematics', hours: 2, studentName: 'Leo Dupuis' }, { name: 'Physics', hours: 1.5, studentName: 'Emma Dupuis' }],
+    packDetails: { hourlyRate: 220, reduction: 20, reductionReason: 'Sibling discount', total: 200 },
+    payments: [{ method: 'card', amount: 200 }],
     teacherIds: ['teacher-1', 'teacher-2'],
+    contact: {
+      address: '123 Rue de la Paix, Casablanca',
+      phone: '+212 6 12 34 56 78',
+      email: 'marc.dupuis@email.com'
+    },
+    student: 'Leo Dupuis', // Backward compatibility
   },
    {
     id: 'family-2',
     sheetIds: ['sheet-3'],
     level: 'L',
-    parents: { mother: 'Sophie Dubois' },
-    student: 'Chloe Dubois',
-    subjects: [{ name: 'French', hours: 2 }],
-    packDetails: { hourlyRate: 35, reduction: 0, total: 140 },
-    payments: [{ method: 'cash', amount: 100 }, { method: 'cheque', amount: 40 }],
+    parents: {
+      mother: { firstName: 'Sophie', lastName: 'Dubois' },
+      lastName: 'Dubois'
+    },
+    students: [
+      { firstName: 'Chloe', lastName: 'Dubois', level: 'L', subLevel: 'Tronc commun (10ᵉ année)' }
+    ] as StudentInfo[],
+    subjects: [{ name: 'French', hours: 2, studentName: 'Chloe Dubois' }],
+    packDetails: { hourlyRate: 180, reduction: 0, total: 180 },
+    payments: [{ method: 'cash', amount: 180 }],
     teacherIds: ['teacher-3'],
+    contact: {
+      address: '456 Avenue Mohammed V, Rabat',
+      phone: '+212 6 87 65 43 21',
+      email: 'sophie.dubois@email.com'
+    },
+    student: 'Chloe Dubois', // Backward compatibility
   },
   {
     id: 'family-3',
     sheetIds: ['sheet-5'],
-    level: 'S',
-    parents: { father: 'Pierre Martin', mother: 'Marie Martin' },
-    student: 'Alex Martin',
-    subjects: [{ name: 'Chemistry', hours: 1.5 }, { name: 'Biology', hours: 1 }],
-    packDetails: { hourlyRate: 45, reduction: 5, reductionReason: 'Early payment', total: 180 },
-    payments: [{ method: 'card', amount: 180 }],
+    level: 'P',
+    parents: {
+      father: { firstName: 'Ahmed', lastName: 'Benali' },
+      mother: { firstName: 'Fatima', lastName: 'Benali' },
+      lastName: 'Benali'
+    },
+    students: [
+      { firstName: 'Youssef', lastName: 'Benali', level: 'P', subLevel: '4ᵉ année primaire' }
+    ] as StudentInfo[],
+    subjects: [{ name: 'Arabic', hours: 3, studentName: 'Youssef Benali' }, { name: 'Mathematics', hours: 2, studentName: 'Youssef Benali' }],
+    packDetails: { hourlyRate: 130, reduction: 10, reductionReason: 'Early payment', total: 120 },
+    payments: [{ method: 'card', amount: 120 }],
     teacherIds: ['teacher-1'],
+    contact: {
+      address: '789 Quartier Hay Riad, Sale',
+      phone: '+212 5 37 12 34 56',
+      email: 'ahmed.benali@gmail.com'
+    },
+    student: 'Youssef Benali', // Backward compatibility
   },
 ];
 

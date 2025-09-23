@@ -8,6 +8,44 @@ export const levelLabels: Record<Level, string> = {
   E: "Spéciale",
 };
 
+export const levelRates: Record<Level, number | null> = {
+  P: 130, // Primaire - 130 MAD
+  C: 150, // Collège - 150 MAD
+  L: 180, // Lycée - 180 MAD
+  S: 220, // Supérieur - 220 MAD
+  E: null, // Spéciale - variable rate (min 100 MAD)
+};
+
+// Sub-levels for each education level (Moroccan education system)
+export const subLevels: Record<Level, string[]> = {
+  P: [
+    "1ʳᵉ année primaire",
+    "2ᵉ année primaire",
+    "3ᵉ année primaire",
+    "4ᵉ année primaire",
+    "5ᵉ année primaire",
+    "6ᵉ année primaire"
+  ], // École primaire
+  C: [
+    "1ʳᵉ année collège (7ᵉ année de scolarité)",
+    "2ᵉ année collège (8ᵉ année)",
+    "3ᵉ année collège (9ᵉ année, brevet)"
+  ], // Enseignement secondaire collégial
+  L: [
+    "Tronc commun (10ᵉ année)",
+    "1ʳᵉ année baccalauréat (11ᵉ année)",
+    "2ᵉ année baccalauréat (12ᵉ année, Bac)"
+  ], // Enseignement secondaire qualifiant
+  S: [
+    "Licence 1 (L1) – 1ʳᵉ année universitaire",
+    "Licence 2 (L2) – 2ᵉ année universitaire",
+    "Licence 3 (L3) – 3ᵉ année universitaire",
+    "Master 1 (M1) – 4ᵉ année universitaire",
+    "Master 2 (M2) – 5ᵉ année universitaire"
+  ], // Université
+  E: ["Prépa", "Ingénieur", "Médecine", "Autres"], // Spéciale
+};
+
 export type PackSize = 24 | 36 | 38;
 export const packSizes: PackSize[] = [24, 36, 38];
 
@@ -32,16 +70,30 @@ export type Sheet = {
   generationDate: Date;
 };
 
+export type StudentInfo = {
+  firstName: string;
+  lastName: string;
+  level: Level;
+  subLevel: string;
+};
+
 export type Family = {
   id: string;
   sheetIds: string[];
-  level: Level;
+  level: Level; // Primary level for family (can be derived from students)
   parents: {
-    father?: string;
-    mother?: string;
+    father?: {
+      firstName?: string;
+      lastName?: string;
+    };
+    mother?: {
+      firstName?: string;
+      lastName?: string;
+    };
+    lastName?: string; // Family last name (fallback)
   };
-  student: string;
-  subjects: { name: string; hours: number }[];
+  students: StudentInfo[]; // Enhanced students with level information
+  subjects: { name: string; hours: number; studentName: string }[]; // Subject assigned to specific student
   packDetails: {
     hourlyRate: number;
     reduction: number;
@@ -50,6 +102,13 @@ export type Family = {
   };
   payments: { method: PaymentMethod; amount: number }[];
   teacherIds: string[];
+  contact: {
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
+  // Keeping backward compatibility
+  student?: string; // Will be migrated to students array
 };
 
 export type Teacher = {
