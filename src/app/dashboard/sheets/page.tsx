@@ -313,7 +313,10 @@ const SheetCard = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `sheet-${sheet.level}-${sheet.startNumber}.svg`;
+    const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+    const startRef = `${sheet.level}-${currentYear}${String(sheet.startNumber).padStart(4, '0')}`;
+    const endRef = `${sheet.level}-${currentYear}${String(sheet.endNumber).padStart(4, '0')}`;
+    a.download = `sheet-${startRef}-${endRef}-${sheet.packSize}tickets.svg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -359,7 +362,10 @@ const SheetCard = ({
       URL.revokeObjectURL(url);
       const imgData = canvas.toDataURL("image/png");
       doc.addImage(imgData, "PNG", 0, 0, 420, 297);
-      doc.save(`sheet-${sheet.level}-${sheet.startNumber}.pdf`);
+      const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+      const startRef = `${sheet.level}-${currentYear}${String(sheet.startNumber).padStart(4, '0')}`;
+      const endRef = `${sheet.level}-${currentYear}${String(sheet.endNumber).padStart(4, '0')}`;
+      doc.save(`sheet-${startRef}-${endRef}-${sheet.packSize}tickets.pdf`);
       const newCount = downloadCount + 1;
       setDownloadCount(newCount);
       try {
@@ -762,7 +768,15 @@ export default function SheetsPage() {
     }
 
     // Save the multi-page PDF
-    doc.save(`sheets-bulk-${selectedSheets.length}-pages.pdf`);
+    const sortedSheets = selectedSheets.map(id => sheets.find(s => s.id === id)).filter(Boolean).sort((a, b) => a!.startNumber - b!.startNumber);
+    const firstSheet = sortedSheets[0]!;
+    const lastSheet = sortedSheets[sortedSheets.length - 1]!;
+    const firstYear = new Date(firstSheet.generationDate).getFullYear().toString().slice(-2);
+    const lastYear = new Date(lastSheet.generationDate).getFullYear().toString().slice(-2);
+    const firstRef = `${firstSheet.level}-${firstYear}${String(firstSheet.startNumber).padStart(4, '0')}`;
+    const lastRef = `${lastSheet.level}-${lastYear}${String(lastSheet.endNumber).padStart(4, '0')}`;
+    const packSizes = [...new Set(sortedSheets.map(sheet => sheet.packSize))].sort((a, b) => a - b).join('-');
+    doc.save(`sheets-${firstRef}-${lastRef}-${packSizes}tickets-${selectedSheets.length}pages.pdf`);
   };
 
   const handleDownloadSelectedSVG = async () => {
@@ -775,7 +789,10 @@ export default function SheetsPage() {
       if (!sheet) continue;
 
       const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
-      const filename = `sheet-${sheet.level}-${sheet.startNumber}.svg`;
+      const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+      const startRef = `${sheet.level}-${currentYear}${String(sheet.startNumber).padStart(4, '0')}`;
+      const endRef = `${sheet.level}-${currentYear}${String(sheet.endNumber).padStart(4, '0')}`;
+      const filename = `sheet-${startRef}-${endRef}-${sheet.packSize}tickets.svg`;
       zip.file(filename, svgContent);
 
       // Persist download count increment
@@ -798,7 +815,15 @@ export default function SheetsPage() {
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `sheets-bulk-${selectedSheets.length}-files.zip`;
+    const sortedSheets = selectedSheets.map(id => sheets.find(s => s.id === id)).filter(Boolean).sort((a, b) => a!.startNumber - b!.startNumber);
+    const firstSheet = sortedSheets[0]!;
+    const lastSheet = sortedSheets[sortedSheets.length - 1]!;
+    const firstYear = new Date(firstSheet.generationDate).getFullYear().toString().slice(-2);
+    const lastYear = new Date(lastSheet.generationDate).getFullYear().toString().slice(-2);
+    const firstRef = `${firstSheet.level}-${firstYear}${String(firstSheet.startNumber).padStart(4, '0')}`;
+    const lastRef = `${lastSheet.level}-${lastYear}${String(lastSheet.endNumber).padStart(4, '0')}`;
+    const packSizes = [...new Set(sortedSheets.map(sheet => sheet.packSize))].sort((a, b) => a - b).join('-');
+    a.download = `sheets-${firstRef}-${lastRef}-${packSizes}tickets-${selectedSheets.length}files.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -840,7 +865,10 @@ export default function SheetsPage() {
       <div className="flex justify-center mb-6">
         <div className="flex gap-2 p-1 bg-muted rounded-lg">
           <button
-            onClick={() => setSelectedPackSize('all')}
+            onClick={() => {
+              setSelectedPackSize('all');
+              setSelectedSheets([]);
+            }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               selectedPackSize === 'all'
                 ? 'bg-primary text-primary-foreground shadow-sm'
@@ -852,7 +880,10 @@ export default function SheetsPage() {
           {packSizes.map((size) => (
             <button
               key={size}
-              onClick={() => setSelectedPackSize(size)}
+              onClick={() => {
+                setSelectedPackSize(size);
+                setSelectedSheets([]);
+              }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 selectedPackSize === size
                   ? 'bg-primary text-primary-foreground shadow-sm'
@@ -866,7 +897,7 @@ export default function SheetsPage() {
       </div>
 
       {/* Education Level Tabs */}
-      <Tabs defaultValue="P">
+      <Tabs defaultValue="P" onValueChange={() => setSelectedSheets([])}>
         <TabsList className="w-full">
           {levels.map((level) => (
             <TabsTrigger key={level} value={level} className="flex-1">
