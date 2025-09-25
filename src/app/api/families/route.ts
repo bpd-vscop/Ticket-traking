@@ -1,32 +1,46 @@
 import clientPromise from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 
+type StudentInfo = {
+  firstName: string;
+  lastName: string;
+  level: 'P' | 'C' | 'L' | 'S' | 'E';
+  subLevel: string;
+};
+
 type FamilyInput = {
   id: string;
-  sheetIds: string[];
+  sheetIds?: string[];
   level: 'P' | 'C' | 'L' | 'S' | 'E';
   parents: {
-    father?: string;
-    mother?: string;
+    father?: {
+      firstName?: string;
+      lastName?: string;
+    } | string; // Support both old and new format
+    mother?: {
+      firstName?: string;
+      lastName?: string;
+    } | string; // Support both old and new format
+    lastName?: string;
   };
-  students: string[];
-  subjects: Array<{
+  students?: StudentInfo[] | string[]; // Support both old and new format
+  subjects?: Array<{
     name: string;
     hours: number;
     studentName: string;
   }>;
-  packDetails: {
+  packDetails?: {
     hourlyRate: number;
     reduction?: number;
     reductionReason?: string;
     total: number;
   };
-  payments: Array<{
+  payments?: Array<{
     method: 'cash' | 'cheque' | 'card';
     amount: number;
   }>;
-  teacherIds: string[];
-  contact: {
+  teacherIds?: string[];
+  contact?: {
     address?: string;
     phone?: string;
     email?: string;
@@ -58,6 +72,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    console.log('Received family data:', JSON.stringify(body, null, 2));
+
     const families: FamilyInput[] = Array.isArray(body?.families)
       ? body.families
       : body?.family
@@ -65,18 +81,22 @@ export async function POST(req: Request) {
       : [];
 
     if (!families.length) {
+      console.error('No families provided in request body:', body);
       return NextResponse.json({ error: 'No families provided' }, { status: 400 });
     }
+
+    console.log('Processing families:', families.length);
 
     const client = await clientPromise;
     const db = client.db();
     const col = db.collection(COLLECTION);
 
     const ops = families.map((f) => {
+      console.log('Processing family:', f.id, f);
+
       const setData: Record<string, any> = {
         id: f.id,
-        updatedAt: new Date(),
-        createdAt: new Date()
+        updatedAt: new Date()
       };
 
       if (f.sheetIds !== undefined) setData.sheetIds = f.sheetIds;
@@ -92,6 +112,8 @@ export async function POST(req: Request) {
       // Handle backward compatibility
       if (f.student !== undefined) setData.student = f.student;
 
+      console.log('Set data for family:', setData);
+
       return {
         updateOne: {
           filter: { id: f.id },
@@ -104,14 +126,24 @@ export async function POST(req: Request) {
       };
     });
 
+    console.log('Database operations prepared:', ops.length);
+
     if (ops.length) {
-      await col.bulkWrite(ops, { ordered: false });
+      const result = await col.bulkWrite(ops, { ordered: false });
+      console.log('Database write result:', result);
     }
 
     return NextResponse.json({ ok: true, count: families.length });
   } catch (err) {
-    console.error('POST /api/families error', err);
-    return NextResponse.json({ error: 'Failed to save families' }, { status: 500 });
+    console.error('POST /api/families error details:', {
+      message: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined,
+      error: err
+    });
+    return NextResponse.json({
+      error: 'Failed to save families',
+      details: err instanceof Error ? err.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

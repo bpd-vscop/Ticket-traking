@@ -46,13 +46,14 @@ const AddTeacherModal = ({
   teacher?: Teacher | null;
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     address: '',
     specializations: [] as TeacherSubjectAssignment[],
     notes: '',
-    customSubjects: {} as Record<Level, string>
+    newSubject: '' // For adding custom subjects
   });
   const { toast } = useToast();
   const isEditMode = !!teacher;
@@ -61,23 +62,25 @@ const AddTeacherModal = ({
   useEffect(() => {
     if (teacher) {
       setFormData({
-        name: teacher.name || '',
+        firstName: teacher.firstName || (teacher.name ? teacher.name.split(' ')[0] : ''),
+        lastName: teacher.lastName || (teacher.name ? teacher.name.split(' ').slice(1).join(' ') : ''),
         email: teacher.email || '',
         phone: teacher.phone || '',
         address: teacher.address || '',
         specializations: teacher.specializations || [],
         notes: teacher.notes || '',
-        customSubjects: {}
+        newSubject: ''
       });
     } else {
       setFormData({
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         address: '',
         specializations: [],
         notes: '',
-        customSubjects: {}
+        newSubject: ''
       });
     }
   }, [teacher]);
@@ -86,10 +89,10 @@ const AddTeacherModal = ({
     e.preventDefault();
 
     // Validation
-    if (!formData.name.trim()) {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
       toast({
         title: "Error",
-        description: "Teacher name is required.",
+        description: "Teacher first and last name are required.",
         variant: "destructive"
       });
       return;
@@ -104,17 +107,12 @@ const AddTeacherModal = ({
       return;
     }
 
-    // Add custom subjects to specializations
-    const finalSpecializations = formData.specializations.map(spec => {
-      const subjects = [...spec.subjects];
-      if (formData.customSubjects[spec.level] && formData.customSubjects[spec.level].trim()) {
-        subjects.push(formData.customSubjects[spec.level].trim());
-      }
-      return { ...spec, subjects };
-    });
+    // Use specializations as-is (subjects are already added to the stack)
+    const finalSpecializations = formData.specializations;
 
     const teacherData: Partial<Teacher> = {
-      name: formData.name.trim(),
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
       email: formData.email.trim() || undefined,
       phone: formData.phone.trim() || undefined,
       address: formData.address.trim() || undefined,
@@ -126,13 +124,14 @@ const AddTeacherModal = ({
       await onSave(teacherData);
       // Reset form
       setFormData({
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         address: '',
         specializations: [],
         notes: '',
-        customSubjects: {}
+        newSubject: ''
       });
       setIsOpen(false);
     } catch (error) {
@@ -144,10 +143,40 @@ const AddTeacherModal = ({
     setFormData(prev => ({
       ...prev,
       specializations: [...prev.specializations, {
-        level: 'P' as Level,
+        level: getNextAvailableLevel(),
         subjects: []
       }]
     }));
+  };
+
+  // Check if we can add a new level (all existing levels must have at least one subject and there are available levels)
+  const canAddNewLevel = () => {
+    if (formData.specializations.length === 0) return true;
+
+    // Check if all existing levels have subjects
+    const allLevelsHaveSubjects = formData.specializations.every(spec => spec.subjects.length > 0);
+
+    // Check if there are still available levels to add
+    const usedLevels = formData.specializations.map(spec => spec.level);
+    const hasAvailableLevels = usedLevels.length < levels.length;
+
+    return allLevelsHaveSubjects && hasAvailableLevels;
+  };
+
+  // Get available levels for a specific specialization (excluding already selected levels)
+  const getAvailableLevels = (currentIndex: number) => {
+    const usedLevels = formData.specializations
+      .map((spec, index) => index !== currentIndex ? spec.level : null)
+      .filter(level => level !== null);
+
+    return levels.filter(level => !usedLevels.includes(level));
+  };
+
+  // Get the next available level for new specializations
+  const getNextAvailableLevel = (): Level => {
+    const usedLevels = formData.specializations.map(spec => spec.level);
+    const availableLevels = levels.filter(level => !usedLevels.includes(level));
+    return availableLevels[0] || 'P'; // Default to 'P' if all are used (shouldn't happen)
   };
 
   const removeSpecialization = (index: number) => {
@@ -161,30 +190,40 @@ const AddTeacherModal = ({
     setFormData(prev => ({
       ...prev,
       specializations: prev.specializations.map((spec, i) =>
-        i === index ? { ...spec, level, subjects: [] } : spec
+        i === index ? { ...spec, level } : spec
       )
     }));
   };
 
-  const updateSpecializationSubjects = (index: number, subject: string, checked: boolean) => {
+
+  const addSubjectToSpecialization = (index: number, subject: string) => {
+    if (!subject.trim()) return;
+
     setFormData(prev => ({
       ...prev,
       specializations: prev.specializations.map((spec, i) => {
         if (i === index) {
-          const subjects = checked
-            ? [...spec.subjects, subject]
-            : spec.subjects.filter(s => s !== subject);
-          return { ...spec, subjects };
+          // Check if subject already exists
+          if (spec.subjects.includes(subject.trim())) {
+            return spec;
+          }
+          return { ...spec, subjects: [...spec.subjects, subject.trim()] };
         }
         return spec;
-      })
+      }),
+      newSubject: '' // Clear the input
     }));
   };
 
-  const updateCustomSubject = (level: Level, value: string) => {
+  const removeSubjectFromSpecialization = (index: number, subject: string) => {
     setFormData(prev => ({
       ...prev,
-      customSubjects: { ...prev.customSubjects, [level]: value }
+      specializations: prev.specializations.map((spec, i) => {
+        if (i === index) {
+          return { ...spec, subjects: spec.subjects.filter(s => s !== subject) };
+        }
+        return spec;
+      })
     }));
   };
 
@@ -241,15 +280,27 @@ const AddTeacherModal = ({
                 </div>
 
                 <div className="space-y-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Dr. Ahmed Ben Ali"
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                        placeholder="Ahmed"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                        placeholder="Ben Ali"
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -293,15 +344,26 @@ const AddTeacherModal = ({
                     <Label className="text-base font-semibold">Specializations *</Label>
                     <span className="text-red-500 text-sm">(At least one required)</span>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addSpecialization}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Level
-                  </Button>
+                  <div className="flex flex-col items-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addSpecialization}
+                      disabled={!canAddNewLevel()}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Level
+                    </Button>
+                    {!canAddNewLevel() && formData.specializations.length > 0 && (
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {formData.specializations.length >= levels.length
+                          ? 'All education levels have been added'
+                          : 'Add subjects to existing levels first'
+                        }
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -331,47 +393,114 @@ const AddTeacherModal = ({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {levels.map(level => (
+                              {getAvailableLevels(index).map(level => (
                                 <SelectItem key={level} value={level}>
                                   {levelLabels[level]}
                                 </SelectItem>
                               ))}
+                              {/* Always include the current level even if it would normally be filtered out */}
+                              {!getAvailableLevels(index).includes(spec.level) && (
+                                <SelectItem key={spec.level} value={spec.level}>
+                                  {levelLabels[spec.level]}
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div>
-                          <Label className="text-sm font-medium">Subjects *</Label>
-                          <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
-                            {subjectsByLevel[spec.level].filter(subject => subject !== "Autre").map(subject => (
-                              <div key={subject} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`${index}-${subject}`}
-                                  checked={spec.subjects.includes(subject)}
-                                  onCheckedChange={(checked) =>
-                                    updateSpecializationSubjects(index, subject, checked as boolean)
-                                  }
-                                />
-                                <Label
-                                  htmlFor={`${index}-${subject}`}
-                                  className="text-xs cursor-pointer"
-                                >
-                                  {subject}
-                                </Label>
-                              </div>
-                            ))}
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">Subjects *</Label>
+                            <Badge variant="outline" className="text-xs">
+                              {spec.subjects.length} selected
+                            </Badge>
                           </div>
 
-                          {/* Custom subject input */}
-                          <div className="mt-3">
-                            <Label htmlFor={`custom-${index}`} className="text-xs">Other Subject:</Label>
-                            <Input
-                              id={`custom-${index}`}
-                              value={formData.customSubjects[spec.level] || ''}
-                              onChange={(e) => updateCustomSubject(spec.level, e.target.value)}
-                              placeholder="Enter custom subject"
-                              className="text-xs mt-1"
-                            />
+                          <div className="mt-3 grid grid-cols-1 gap-4">
+                            {/* Selected Subjects */}
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Selected Subjects</Label>
+                              {spec.subjects.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {spec.subjects.map((subject, subIndex) => (
+                                    <div
+                                      key={subIndex}
+                                      className="group flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg border border-primary/20 hover:bg-primary/15 transition-colors"
+                                    >
+                                      <span className="text-sm font-medium">{subject}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeSubjectFromSpecialization(index, subject)}
+                                        className="opacity-60 hover:opacity-100 hover:text-red-600 transition-all"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-4 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+                                  <BookUser className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Available Subjects */}
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Available Subjects</Label>
+                              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-3 bg-muted/30 rounded-lg border">
+                                {subjectsByLevel[spec.level]
+                                  .filter(subject => !spec.subjects.includes(subject))
+                                  .map(subject => (
+                                    <button
+                                      key={subject}
+                                      type="button"
+                                      onClick={() => addSubjectToSpecialization(index, subject)}
+                                      className="group flex items-center gap-2 p-2 text-left hover:bg-white hover:shadow-sm rounded-md border border-transparent hover:border-border transition-all text-sm"
+                                    >
+                                      <div className="flex-shrink-0 w-5 h-5 rounded border-2 border-primary/30 group-hover:border-primary group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                                        <Plus className="h-3 w-3 text-primary/60 group-hover:text-primary" />
+                                      </div>
+                                      <span className="group-hover:text-primary transition-colors">{subject}</span>
+                                    </button>
+                                  ))}
+                                {subjectsByLevel[spec.level].filter(subject => !spec.subjects.includes(subject)).length === 0 && (
+                                  <div className="col-span-full text-center py-4">
+                                    <p className="text-sm text-muted-foreground">All subjects have been added</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Custom Subject */}
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Add Custom Subject</Label>
+                              <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                  <Input
+                                    value={formData.newSubject}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, newSubject: e.target.value }))}
+                                    placeholder="Enter custom subject name..."
+                                    className="pr-10"
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addSubjectToSpecialization(index, formData.newSubject);
+                                      }
+                                    }}
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => addSubjectToSpecialization(index, formData.newSubject)}
+                                    disabled={!formData.newSubject.trim()}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -434,7 +563,7 @@ const CompactTeacherCard = ({
           <div className="flex-1">
             <CardTitle className="text-sm flex items-center gap-1">
               <User className="h-4 w-4" />
-              {teacher.name}
+              {teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.name || 'Unnamed Teacher'}
             </CardTitle>
           </div>
         </div>
@@ -507,7 +636,7 @@ const TeachersTableView = ({
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    {teacher.name}
+                    {teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.name || 'Unnamed Teacher'}
                   </div>
                 </TableCell>
                 <TableCell className="text-sm">
@@ -580,7 +709,7 @@ const TeacherCard = ({
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              {teacher.name}
+              {teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.name || 'Unnamed Teacher'}
             </CardTitle>
             <CardDescription className="space-y-1 mt-2">
               {teacher.email && (
@@ -704,13 +833,13 @@ export default function TeachersPage() {
         setTeachers(prev => prev.map(t => t.id === editingTeacher.id ? savedTeacher : t));
         toast({
           title: "Teacher Updated",
-          description: `${teacherData.name} has been successfully updated.`
+          description: `${teacherData.firstName} ${teacherData.lastName} has been successfully updated.`
         });
       } else {
         setTeachers(prev => [savedTeacher, ...prev]);
         toast({
           title: "Teacher Added",
-          description: `${teacherData.name} has been successfully added.`
+          description: `${teacherData.firstName} ${teacherData.lastName} has been successfully added.`
         });
       }
     } catch (error) {
@@ -759,8 +888,11 @@ export default function TeachersPage() {
 
       // Filter by search term
       const searchTerm = filters.searchTerm.toLowerCase();
+      const teacherName = teacher.firstName && teacher.lastName
+        ? `${teacher.firstName} ${teacher.lastName}`
+        : teacher.name || '';
       const matchesSearch = searchTerm === '' ||
-        teacher.name.toLowerCase().includes(searchTerm) ||
+        teacherName.toLowerCase().includes(searchTerm) ||
         teacher.email?.toLowerCase().includes(searchTerm) ||
         teacher.specializations?.some(spec =>
           spec.subjects.some(subject => subject.toLowerCase().includes(searchTerm))

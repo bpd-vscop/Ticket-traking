@@ -474,7 +474,7 @@ const PackCard = ({
             {teachers.map(teacher => (
                  <div key={teacher.id} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <BookUser className="h-4 w-4"/>
-                    <span>{teacher.name}</span>
+                    <span>{teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.name || 'Unnamed Teacher'}</span>
                  </div>
             ))}
         </div>

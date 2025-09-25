@@ -48,6 +48,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Table as TableComponent,
   TableBody,
@@ -719,8 +720,19 @@ const AssignmentModal = ({
   const { toast } = useToast();
   const [families, setFamilies] = useState<Family[]>([]);
   const [selectedFamilyId, setSelectedFamilyId] = useState<string>('');
-  const [reduction, setReduction] = useState(0);
+  const [reductionType, setReductionType] = useState<'5%' | '7%' | '10%' | '15%' | 'other' | 'none'>('none');
+  const [customReduction, setCustomReduction] = useState(0);
   const [reductionReason, setReductionReason] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'cheque' | 'card'>('cash');
+  const [advancePayment, setAdvancePayment] = useState(0);
+  const [remainingPayments, setRemainingPayments] = useState<{
+    method: 'cash' | 'cheque' | 'card';
+    amount: number;
+    dueDate: string;
+    chequeNumber?: string;
+    chequeReceived?: boolean;
+    notes?: string;
+  }[]>([]);
 
   // Calculate total tickets and pricing
   const totalTickets = sheets.reduce((sum, sheet) => sum + sheet.packSize, 0);
@@ -730,6 +742,15 @@ const AssignmentModal = ({
   const [customRate, setCustomRate] = useState(baseRate || 100);
 
   const effectiveRate = isVariableRate ? customRate : baseRate;
+
+  // Calculate reduction amount based on type
+  const reduction = (() => {
+    if (reductionType === 'none') return 0;
+    if (reductionType === 'other') return customReduction;
+    const percentage = parseInt(reductionType.replace('%', ''));
+    return Math.round((totalTickets * effectiveRate) * (percentage / 100));
+  })();
+
   const totalAmount = (totalTickets * effectiveRate) - reduction;
 
   // Fetch families
@@ -763,7 +784,7 @@ const AssignmentModal = ({
     }
 
     try {
-      // Update family with pricing details
+      // Update family with pricing details and payments
       const packDetails = {
         hourlyRate: effectiveRate,
         reduction,
@@ -771,20 +792,66 @@ const AssignmentModal = ({
         total: totalAmount
       };
 
-      const response = await fetch('/api/families', {
+      const payments = [];
+
+      // Add advance payment if provided
+      if (advancePayment > 0) {
+        payments.push({
+          method: paymentMethod,
+          amount: advancePayment,
+          status: 'completed',
+          date: new Date().toISOString().split('T')[0]
+        });
+      }
+
+      // Add remaining payments
+      remainingPayments.forEach(payment => {
+        payments.push({
+          method: payment.method,
+          amount: payment.amount,
+          status: 'pending',
+          dueDate: payment.dueDate,
+          chequeNumber: payment.chequeNumber,
+          chequeReceived: payment.chequeReceived,
+          notes: payment.notes
+        });
+      });
+
+      // Step 1: Update family with sheet assignments and pricing
+      const familyResponse = await fetch('/api/families', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           family: {
             id: selectedFamilyId,
             packDetails,
+            payments,
             sheetIds: [...sheets.map(s => s.id)]
           }
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to assign sheets');
+      if (!familyResponse.ok) {
+        throw new Error('Failed to update family');
+      }
+
+      // Step 2: Update each sheet to mark as assigned and link to family
+      const sheetUpdates = sheets.map(sheet => ({
+        id: sheet.id,
+        isAssigned: true,
+        familyId: selectedFamilyId
+      }));
+
+      const sheetsResponse = await fetch('/api/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sheets: sheetUpdates
+        }),
+      });
+
+      if (!sheetsResponse.ok) {
+        throw new Error('Failed to update sheets assignment status');
       }
 
       toast({
@@ -794,6 +861,7 @@ const AssignmentModal = ({
       onAssign();
       setIsOpen(false);
     } catch (error) {
+      console.error('Sheet assignment error:', error);
       toast({
         title: "Error",
         description: "Failed to assign sheets. Please try again.",
@@ -908,13 +976,11 @@ const AssignmentModal = ({
               {isVariableRate && (
                 <div className="space-y-2">
                   <Label htmlFor="custom-rate">Custom Rate for Spéciale (MAD) *</Label>
-                  <Input
+                  <NumberInput
                     id="custom-rate"
-                    type="number"
                     value={customRate}
-                    onChange={(e) => setCustomRate(Number(e.target.value))}
-                    min="100"
-                    required
+                    onChange={(value) => setCustomRate(value)}
+                    min={100}
                   />
                   <p className="text-xs text-muted-foreground">Minimum 100 MAD per ticket</p>
                 </div>
@@ -923,15 +989,39 @@ const AssignmentModal = ({
               {/* Reduction */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reduction">Reduction (MAD)</Label>
-                  <Input
-                    id="reduction"
-                    type="number"
-                    value={reduction}
-                    onChange={(e) => setReduction(Number(e.target.value))}
-                    min="0"
-                    placeholder="0"
-                  />
+                  <Label htmlFor="reduction-type">Reduction</Label>
+                  <Select value={reductionType} onValueChange={(value: 'none' | '5%' | '7%' | '10%' | '15%' | 'other') => {
+                    setReductionType(value);
+                    if (value !== 'other') setCustomReduction(0);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Reduction</SelectItem>
+                      <SelectItem value="5%">5% Discount</SelectItem>
+                      <SelectItem value="7%">7% Discount</SelectItem>
+                      <SelectItem value="10%">10% Discount</SelectItem>
+                      <SelectItem value="15%">15% Discount</SelectItem>
+                      <SelectItem value="other">Other (Custom)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {reductionType === 'other' && (
+                    <NumberInput
+                      value={customReduction}
+                      onChange={(value) => setCustomReduction(value)}
+                      min={0}
+                      max={totalTickets * effectiveRate}
+                      placeholder="Enter custom reduction (MAD)"
+                      className="mt-2"
+                    />
+                  )}
+                  {reductionType !== 'none' && (
+                    <p className="text-xs text-muted-foreground">
+                      Reduction: {reduction} MAD
+                      {reductionType !== 'other' && ` (${reductionType} of ${totalTickets * effectiveRate} MAD)`}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reduction-reason">Reduction Reason</Label>
@@ -940,7 +1030,7 @@ const AssignmentModal = ({
                     value={reductionReason}
                     onChange={(e) => setReductionReason(e.target.value)}
                     placeholder="e.g., Sibling discount"
-                    disabled={reduction === 0}
+                    disabled={reductionType === 'none'}
                   />
                 </div>
               </div>
@@ -950,18 +1040,213 @@ const AssignmentModal = ({
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">Selected Family Details</h4>
                   <div className="text-sm space-y-1">
-                    <p><strong>Students:</strong> {(selectedFamily.students || [selectedFamily.student || '']).filter(Boolean).join(', ')}</p>
-                    <p><strong>Parents:</strong> {[selectedFamily.parents.father, selectedFamily.parents.mother].filter(Boolean).join(' & ')}</p>
+                    <p><strong>Students:</strong> {
+                      (() => {
+                        const students = selectedFamily.students;
+                        if (students && students.length > 0 && typeof students[0] === 'object') {
+                          return (students as any[]).map(s => `${s.firstName} ${s.lastName}`).join(', ');
+                        }
+                        return (students as unknown as string[])?.join(', ') || selectedFamily.student || 'No students';
+                      })()
+                    }</p>
+                    <p><strong>Parents:</strong> {
+                      (() => {
+                        const { father, mother, lastName } = selectedFamily.parents;
+                        const fatherName = father ? `${father.firstName || ''} ${father.lastName || lastName || ''}`.trim() : '';
+                        const motherName = mother ? `${mother.firstName || ''} ${mother.lastName || lastName || ''}`.trim() : '';
+                        return [fatherName, motherName].filter(Boolean).join(' & ') || 'No parent info';
+                      })()
+                    }</p>
                     <p><strong>Contact:</strong> {selectedFamily.contact?.phone || selectedFamily.contact?.email || 'No contact info'}</p>
                   </div>
                 </div>
               )}
 
-              {/* Final Total */}
+              {/* Payment Method */}
+              <div className="space-y-2">
+                <Label htmlFor="payment-method">Payment Method *</Label>
+                <Select value={paymentMethod} onValueChange={(value: 'cash' | 'cheque' | 'card') => setPaymentMethod(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Advance Payment */}
+              <div className="space-y-2">
+                <Label htmlFor="advance">Advance Payment (MAD)</Label>
+                <NumberInput
+                  id="advance"
+                  value={advancePayment}
+                  onChange={(value) => setAdvancePayment(value)}
+                  min={0}
+                  max={totalAmount}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground">Maximum: {totalAmount} MAD</p>
+              </div>
+
+              {/* Remaining Payments */}
+              {advancePayment > 0 && advancePayment < totalAmount && (
+                <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold text-orange-800">Remaining Payments</h4>
+                    <p className="text-sm text-orange-600">Remaining: {totalAmount - advancePayment - remainingPayments.reduce((sum, p) => sum + p.amount, 0)} MAD</p>
+                  </div>
+
+                  {remainingPayments.map((payment, index) => (
+                    <div key={index} className="p-3 bg-white border rounded-lg">
+                      <div className="flex justify-between items-center mb-3">
+                        <h5 className="font-medium">Payment {index + 1}</h5>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setRemainingPayments(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="space-y-2">
+                          <Label>Payment Method</Label>
+                          <Select value={payment.method} onValueChange={(value: 'cash' | 'cheque' | 'card') => {
+                            const updated = [...remainingPayments];
+                            updated[index] = { ...updated[index], method: value };
+                            setRemainingPayments(updated);
+                          }}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="cheque">Cheque</SelectItem>
+                              <SelectItem value="card">Card</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Amount (MAD)</Label>
+                          <NumberInput
+                            value={payment.amount}
+                            onChange={(value) => {
+                              const updated = [...remainingPayments];
+                              updated[index] = { ...updated[index], amount: value };
+                              setRemainingPayments(updated);
+                            }}
+                            min={0}
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 mb-3">
+                        <div className="space-y-2">
+                          <Label>Due Date</Label>
+                          <Input
+                            type="date"
+                            value={payment.dueDate}
+                            onChange={(e) => {
+                              const updated = [...remainingPayments];
+                              updated[index] = { ...updated[index], dueDate: e.target.value };
+                              setRemainingPayments(updated);
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {payment.method === 'cheque' && (
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label>Cheque Number</Label>
+                            <Input
+                              value={payment.chequeNumber || ''}
+                              onChange={(e) => {
+                                const updated = [...remainingPayments];
+                                updated[index] = { ...updated[index], chequeNumber: e.target.value };
+                                setRemainingPayments(updated);
+                              }}
+                              placeholder="Enter cheque number"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={payment.chequeReceived || false}
+                              onCheckedChange={(checked) => {
+                                const updated = [...remainingPayments];
+                                updated[index] = { ...updated[index], chequeReceived: !!checked };
+                                setRemainingPayments(updated);
+                              }}
+                            />
+                            <Label>Cheque received</Label>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 mt-3">
+                        <Label>Notes</Label>
+                        <Input
+                          value={payment.notes || ''}
+                          onChange={(e) => {
+                            const updated = [...remainingPayments];
+                            updated[index] = { ...updated[index], notes: e.target.value };
+                            setRemainingPayments(updated);
+                          }}
+                          placeholder="Additional notes"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const remainingAmount = totalAmount - advancePayment - remainingPayments.reduce((sum, p) => sum + p.amount, 0);
+                      if (remainingAmount > 0) {
+                        setRemainingPayments(prev => [...prev, {
+                          method: 'cash',
+                          amount: Math.min(remainingAmount, 1000),
+                          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                          notes: ''
+                        }]);
+                      }
+                    }}
+                    className="w-full"
+                    disabled={totalAmount - advancePayment - remainingPayments.reduce((sum, p) => sum + p.amount, 0) <= 0}
+                  >
+                    Add Payment ({totalAmount - advancePayment - remainingPayments.reduce((sum, p) => sum + p.amount, 0)} MAD remaining)
+                  </Button>
+                </div>
+              )}
+
+              {/* Payment Summary */}
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total Amount:</span>
-                  <span className="text-xl font-bold text-green-700">{totalAmount} MAD</span>
+                <h4 className="font-semibold mb-2">Payment Summary</h4>
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Total Amount:</span>
+                    <span className="font-semibold">{totalAmount} MAD</span>
+                  </div>
+                  {advancePayment > 0 && (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Advance Payment:</span>
+                        <span className="text-blue-600">-{advancePayment} MAD</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1 mt-1">
+                        <span className="font-semibold">Remaining:</span>
+                        <span className="font-bold text-orange-600">{totalAmount - advancePayment} MAD</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </form>
@@ -1362,7 +1647,7 @@ export default function SheetsPage() {
       <AssignmentModal
         isOpen={isModalOpen}
         setIsOpen={setIsModalOpen}
-        sheets={getSheets().filter(s => selectedSheets.includes(s.id))}
+        sheets={sheets.filter(s => selectedSheets.includes(s.id))}
         onAssign={handleAssign}
       />
     </div>

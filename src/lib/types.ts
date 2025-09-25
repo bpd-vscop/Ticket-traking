@@ -51,6 +51,17 @@ export const packSizes: PackSize[] = [24, 36, 38];
 
 export type PaymentMethod = "cash" | "cheque" | "card";
 
+export type Payment = {
+  method: PaymentMethod;
+  amount: number;
+  status?: 'pending' | 'completed' | 'overdue';
+  date?: string;
+  dueDate?: string;
+  chequeNumber?: string;
+  chequeReceived?: boolean;
+  notes?: string;
+};
+
 export type Ticket = {
   id: string; // e.g., P-25001
   level: Level;
@@ -100,7 +111,7 @@ export type Family = {
     reductionReason?: string;
     total: number;
   };
-  payments: { method: PaymentMethod; amount: number }[];
+  payments: Payment[];
   teacherIds: string[];
   contact: {
     address?: string;
@@ -116,40 +127,39 @@ export const subjectsByLevel: Record<Level, string[]> = {
   P: [
     "Français",
     "Arabe",
+    "Anglais",
+    "Espagnol",
     "Mathématiques",
     "Sciences de la vie et de la terre (SVT)",
     "Histoire – Géographie",
     "Éducation islamique",
     "Informatique",
-    "Autre"
   ], // Primaire
   C: [
     "Français",
     "Arabe",
     "Anglais",
+    "Espagnol",
     "Mathématiques",
     "Sciences physiques et chimiques",
     "Sciences de la vie et de la terre (SVT)",
     "Histoire – Géographie",
     "Éducation islamique",
     "Éducation artistique",
-    "Technologie / Informatique",
-    "Autre"
+    "Informatique"
   ], // Collège
   L: [
     "Français",
     "Arabe",
     "Anglais",
+    "Espagnol",
     "Mathématiques",
     "Sciences de la vie et de la terre (SVT)",
-    "Sciences physiques et chimiques",
+    "Physiques et chimiques",
     "Histoire – Géographie",
     "Philosophie",
     "Éducation islamique",
-    "Physique – Chimie",
-    "Informatique",
-    "Espagnol",
-    "Autre"
+    "Informatique"
   ], // Lycée
   S: [
     "Mathématiques",
@@ -193,8 +203,7 @@ export const subjectsByLevel: Record<Level, string[]> = {
     "Génie civil",
     "Génie mécanique",
     "Génie électrique",
-    "Génie industriel",
-    "Autre"
+    "Génie industriel"
   ], // Supérieur
   E: [
     "Mathématiques",
@@ -216,12 +225,15 @@ export type TeacherSubjectAssignment = {
 
 export type Teacher = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email?: string;
   phone?: string;
   address?: string;
   specializations: TeacherSubjectAssignment[];
   notes?: string;
+  // Backward compatibility
+  name?: string;
 };
 
 export type User = {

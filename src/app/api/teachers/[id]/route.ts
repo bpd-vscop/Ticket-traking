@@ -17,10 +17,11 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
   }
 
   try {
-    const { name, email, phone, address, specializations, notes } = await request.json();
+    const { firstName, lastName, name, email, phone, address, specializations, notes } = await request.json();
 
-    if (!name) {
-      return NextResponse.json({ message: 'Missing required field: name' }, { status: 400 });
+    // Support both new format (firstName, lastName) and old format (name)
+    if (!firstName && !lastName && !name) {
+      return NextResponse.json({ message: 'Missing required field: firstName and lastName or name' }, { status: 400 });
     }
 
     if (!specializations || specializations.length === 0) {
@@ -30,14 +31,23 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
     const client = await clientPromise;
     const db = client.db();
 
-    const updateData = {
-      name,
+    const updateData: any = {
       email: email || undefined,
       phone: phone || undefined,
       address: address || undefined,
       specializations,
       notes: notes || undefined,
     };
+
+    // Handle name fields
+    if (firstName && lastName) {
+      updateData.firstName = firstName;
+      updateData.lastName = lastName;
+    } else if (name) {
+      updateData.firstName = name.split(' ')[0];
+      updateData.lastName = name.split(' ').slice(1).join(' ') || '';
+      updateData.name = name; // Keep backward compatibility
+    }
 
     const result = await db.collection('teachers').updateOne({ id }, { $set: updateData });
 

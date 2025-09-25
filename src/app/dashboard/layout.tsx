@@ -29,6 +29,7 @@ import {
   Menu,
   X,
   BookUser,
+  CreditCard,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/dashboard/sheets", icon: LayoutGrid, label: "Sheets" },
   { href: "/dashboard/families", icon: Users, label: "Families" },
   { href: "/dashboard/teachers", icon: BookUser, label: "Teachers" },
+  { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
   { href: "/dashboard/packs", icon: PackageCheck, label: "Packs" },
   { href: "/dashboard/users", icon: Shield, label: "Users", adminOnly: true },
 ];

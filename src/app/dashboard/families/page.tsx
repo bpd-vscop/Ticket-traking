@@ -599,7 +599,7 @@ const TeacherAssignmentModal = ({
                 <SelectContent>
                     {teachers.map(teacher => (
                         <SelectItem key={teacher.id} value={teacher.id}>
-                           {teacher.name}
+                           {teacher.firstName && teacher.lastName ? `${teacher.firstName} ${teacher.lastName}` : teacher.name || 'Unnamed Teacher'}
                         </SelectItem>
                     ))}
                 </SelectContent>

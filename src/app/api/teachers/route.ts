@@ -31,10 +31,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, phone, address, specializations, notes } = await request.json();
+    const { firstName, lastName, name, email, phone, address, specializations, notes } = await request.json();
 
-    if (!name) {
-      return NextResponse.json({ message: 'Missing required field: name' }, { status: 400 });
+    // Support both new format (firstName, lastName) and old format (name)
+    if (!firstName && !lastName && !name) {
+      return NextResponse.json({ message: 'Missing required field: firstName and lastName or name' }, { status: 400 });
     }
 
     if (!specializations || specializations.length === 0) {
@@ -46,13 +47,19 @@ export async function POST(request: Request) {
 
     const newTeacher: Teacher = {
       id: `teacher-${Date.now()}`,
-      name,
+      firstName: firstName || (name ? name.split(' ')[0] : ''),
+      lastName: lastName || (name ? name.split(' ').slice(1).join(' ') : ''),
       email: email || undefined,
       phone: phone || undefined,
       address: address || undefined,
       specializations,
       notes: notes || undefined,
     };
+
+    // Keep backward compatibility
+    if (name && !firstName && !lastName) {
+      newTeacher.name = name;
+    }
 
     await db.collection('teachers').insertOne(newTeacher);
     return NextResponse.json(newTeacher, { status: 201 });
