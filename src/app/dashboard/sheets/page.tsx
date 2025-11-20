@@ -83,17 +83,222 @@ async function getPublicLogoDataUri(): Promise<string> {
   }
 }
 
+// Helper function for bulk download: generates SVG from a list of tickets
+const generateBulkSheetSvg = (
+  tickets: { level: string; year: string; serial: number; sheetId: string }[],
+  ticketLogoSrc: string,
+  watermarkHref: string
+): string => {
+  const packSize = tickets.length;
+
+  // --- Layout Customization ---
+  const ticketWidth = 40; // 4cm (width of each ticket)
+  const ticketHeight = 50; // 5cm (height of each ticket)
+  const sheetWidth = 210; // A4 portrait width (21cm)
+  const sheetHeight = 297; // A4 portrait height (29.7cm)
+  const cols = 4; // 4 columns (4 tickets wide)
+  const rows = Math.ceil(packSize / cols); // Auto-calculate rows based on pack size (max 5 rows = 20 tickets)
+  // --- End Customization ---
+
+  const gridWidth = cols * ticketWidth;
+  const gridHeight = rows * ticketHeight;
+
+  // Center the grid on the sheet
+  const marginLeft = (sheetWidth - gridWidth) / 2;
+  const marginTop = (sheetHeight - gridHeight) / 2;
+
+  // Code39 encoding
+  const CODE39: Record<string, string> = {
+    "0": "n n n w w n w n n",
+    "1": "w n n w n n n n w",
+    "2": "n n w w n n n n w",
+    "3": "w n w w n n n n n",
+    "4": "n n n w w n n n w",
+    "5": "w n n w w n n n n",
+    "6": "n n w w w n n n n",
+    "7": "n n n w n n w n w",
+    "8": "w n n w n n w n n",
+    "9": "n n w w n n w n n",
+    A: "w n n n n w n n w",
+    B: "n n w n n w n n w",
+    C: "w n w n n w n n n",
+    D: "n n n n w w n n w",
+    E: "w n n n w w n n n",
+    F: "n n w n w w n n n",
+    G: "n n n n n w w n w",
+    H: "w n n n n w w n n",
+    I: "n n w n n w w n n",
+    J: "n n n n w w w n n",
+    K: "w n n n n n n w w",
+    L: "n n w n n n n w w",
+    M: "w n w n n n n w n",
+    N: "n n n n w n n w w",
+    O: "w n n n w n n w n",
+    P: "n n w n w n n w n",
+    Q: "n n n n n n w w w",
+    R: "w n n n n n w w n",
+    S: "n n w n n n w w n",
+    T: "n n n n w n w w n",
+    U: "w w n n n n n n w",
+    V: "n w w n n n n n w",
+    W: "w w w n n n n n n",
+    X: "n w n n w n n n w",
+    Y: "w w n n w n n n n",
+    Z: "n w w n w n n n n",
+    "-": "n w n n n n w n w",
+    ".": "w w n n n n w n n",
+    " ": "n w w n n n w n n",
+    "$": "n w n w n w n n n",
+    "/": "n w n w n n n w n",
+    "+": "n w n n n w n w n",
+    "%": "n n n w n w n w n",
+    "*": "n w n n w n w n n",
+  };
+
+  const code39BarsSvg = (value: string, x: number, y: number, width: number, height: number) => {
+    const sanitize = (t: string) => t.toUpperCase().replace(/[^0-9A-Z\. \-\$\/\+%]/g, "-");
+    const data = `*${sanitize(value)}*`;
+    const narrow = 1;
+    const wide = 3;
+    const quiet = 10;
+
+    const seq: number[] = [quiet];
+    let totalUnits = quiet;
+    for (let i = 0; i < data.length; i++) {
+      const patt = CODE39[data[i]];
+      if (!patt) continue;
+      const parts = patt.split(" ");
+      for (let j = 0; j < parts.length; j++) {
+        const w = parts[j] === "w" ? wide : narrow;
+        seq.push(w);
+        totalUnits += w;
+      }
+      if (i < data.length - 1) {
+        seq.push(narrow);
+        totalUnits += narrow;
+      }
+    }
+    seq.push(quiet);
+    totalUnits += quiet;
+
+    const margin = 0.5;
+    const bx = x + margin;
+    const by = y + margin;
+    const bw = Math.max(0, width - margin * 2);
+    const bh = Math.max(0, height - margin * 2);
+    const unitW = bw / totalUnits;
+
+    let cx = bx;
+    let drawBar = false;
+    let svg = "";
+    for (let i = 0; i < seq.length; i++) {
+      const w = seq[i] * unitW;
+      if (drawBar) {
+        svg += `<rect x="${cx}" y="${by}" width="${w}" height="${bh}" fill="#111827" />`;
+      }
+      cx += w;
+      drawBar = !drawBar;
+    }
+    return svg;
+  };
+
+  let ticketsSvg = '';
+  for (let i = 0; i < packSize; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const x = col * ticketWidth;
+    const y = row * ticketHeight;
+    const ticket = tickets[i];
+    const nn = String(ticket.serial).padStart(4, "0");
+    const code = `${ticket.level}-${ticket.year}${nn}`;
+
+    const referenceH = ticketHeight * 0.05;
+    const barcodeH = ticketHeight * 0.15;
+    const logoH = ticketHeight * 0.8;
+
+    const barcodeMargin = 0.5;
+    const barcodeSvg = code39BarsSvg(code, 0, ticketHeight - barcodeH, ticketWidth, barcodeH);
+
+    const actualBarcodeWidth = ticketWidth - (barcodeMargin * 2);
+    const barcodeStartX = barcodeMargin;
+
+    ticketsSvg += `
+      <g transform="translate(${x}, ${y})">
+        <rect width="${ticketWidth}" height="${ticketHeight}" fill="white" />
+        <image href="${ticketLogoSrc}" x="0" y="0" width="${ticketWidth}" height="${logoH}" preserveAspectRatio="xMidYMid meet" />
+        <text
+          x="${barcodeStartX + actualBarcodeWidth / 2 + 1}"
+          y="${logoH + referenceH / 2}"
+          fill="#111827"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+          font-size="2"
+          font-weight="300"
+          text-anchor="middle"
+          dominant-baseline="central"
+          letter-spacing="2"
+        >
+          ${code}
+        </text>
+        ${barcodeSvg}
+      </g>
+    `;
+  }
+
+  // Grid overlay
+  const stroke = '#cccccc';
+  const strokeW = 0.5;
+  const dash = '2 2';
+  let gridSvg = '';
+  for (let c = 0; c <= cols; c++) {
+    const gx = c * ticketWidth;
+    gridSvg += `<line x1="${gx}" y1="0" x2="${gx}" y2="${gridHeight}" stroke="${stroke}" stroke-width="${strokeW}" stroke-dasharray="${dash}" stroke-linecap="butt" shape-rendering="geometricPrecision" />`;
+  }
+  for (let r = 0; r <= rows; r++) {
+    const gy = r * ticketHeight;
+    gridSvg += `<line x1="0" y1="${gy}" x2="${gridWidth}" y2="${gy}" stroke="${stroke}" stroke-width="${strokeW}" stroke-dasharray="${dash}" stroke-linecap="butt" shape-rendering="geometricPrecision" />`;
+  }
+
+  const watermarkTile = 75.5;
+  const watermarkStepY = watermarkTile * 0.866;
+
+  return `
+    <svg
+      width="${sheetWidth}mm"
+      height="${sheetHeight}mm"
+      viewBox="0 0 ${sheetWidth} ${sheetHeight}"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+    >
+      <defs>
+        <pattern id="watermark" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <image href="${watermarkHref}" x="0" y="0" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+        </pattern>
+        <pattern id="watermark-staggered" width="${watermarkTile}" height="${watermarkStepY}" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+          <image href="${watermarkHref}" x="${watermarkTile / 2}" y="${watermarkStepY / 2}" width="${watermarkTile / 2}" height="${watermarkTile / 2}" opacity="0.12" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="white" />
+      <rect width="100%" height="100%" fill="url(#watermark)" />
+      <rect width="100%" height="100%" fill="url(#watermark-staggered)" />
+      <g transform="translate(${marginLeft}, ${marginTop})">
+        ${ticketsSvg}
+        ${gridSvg}
+      </g>
+    </svg>
+  `;
+};
+
 const generateSheetSvg = (sheet: Sheet, ticketLogoSrc: string, watermarkHref: string): string => {
   const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
   const { packSize, level } = sheet;
 
   // --- Layout Customization ---
-  const ticketWidth = 40; // 4cm
-  const ticketHeight = 50; // 5cm
-  const sheetWidth = 420; // A3 landscape width
-  const sheetHeight = 297; // A3 landscape height
-  const cols = 8; // Fixed 8 columns
-  const rows = Math.ceil(packSize / cols);
+  const ticketWidth = 40; // 4cm (width of each ticket)
+  const ticketHeight = 50; // 5cm (height of each ticket)
+  const sheetWidth = 210; // A4 portrait width (21cm)
+  const sheetHeight = 297; // A4 portrait height (29.7cm)
+  const cols = 4; // 4 columns (4 tickets wide)
+  const rows = Math.ceil(packSize / cols); // Auto-calculate rows based on pack size (max 5 rows = 20 tickets)
   // --- End Customization ---
 
   const gridWidth = cols * ticketWidth;
@@ -500,49 +705,81 @@ const SheetCard = ({
   const handleDownloadPdf = async () => {
     const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
     const watermarkHref = await getPublicLogoDataUri();
-    const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
 
+    // Collect all tickets from the sheet
+    const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+    const allTickets: { level: string; year: string; serial: number; sheetId: string }[] = [];
+    for (let i = 0; i < sheet.packSize; i++) {
+      const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
+      allTickets.push({
+        level: sheet.level,
+        year: currentYear,
+        serial,
+        sheetId: sheet.id
+      });
+    }
+
+    // Create PDF with A4 portrait pages, 20 tickets per page (4 wide × 5 high)
     const doc = new jsPDF({
-      orientation: "landscape",
+      orientation: "portrait",
       unit: "mm",
-      format: "a3",
+      format: "a4",
     });
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    const TICKETS_PER_PAGE = 20;
+    const totalPages = Math.ceil(allTickets.length / TICKETS_PER_PAGE);
 
-    // For better quality, render at a higher resolution. A scale of 4 should be sharp.
-    const scale = 12;
-    const canvasWidth = 420 * scale;
-    const canvasHeight = 297 * scale;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
+    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+      const startTicketIndex = pageIndex * TICKETS_PER_PAGE;
+      const endTicketIndex = Math.min(startTicketIndex + TICKETS_PER_PAGE, allTickets.length);
+      const ticketsOnPage = allTickets.slice(startTicketIndex, endTicketIndex);
 
-    const img = new Image();
-    const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
+      // Generate SVG for this page
+      const svgContent = generateBulkSheetSvg(ticketsOnPage, userLogoSrc, watermarkHref);
 
-    img.onload = () => {
-      ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
-      URL.revokeObjectURL(url);
-      const imgData = canvas.toDataURL("image/png");
-      doc.addImage(imgData, "PNG", 0, 0, 420, 297);
-      const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
-      const startRef = `${sheet.level}-${currentYear}${String(sheet.startNumber).padStart(4, '0')}`;
-      const endRef = `${sheet.level}-${currentYear}${String(sheet.endNumber).padStart(4, '0')}`;
-      doc.save(`sheet-${startRef}-${endRef}-${sheet.packSize}tickets.pdf`);
-      const newCount = downloadCount + 1;
-      setDownloadCount(newCount);
-      try {
-        fetch('/api/sheets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sheet: { id: sheet.id, downloads: newCount } }),
-        }).catch(() => {});
-      } catch {}
-    };
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const scale = 12;
+      const canvasWidth = 210 * scale;
+      const canvasHeight = 297 * scale;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
 
-    img.src = url;
+      const img = new Image();
+      const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          if (pageIndex > 0) {
+            doc.addPage();
+          }
+
+          ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+          URL.revokeObjectURL(url);
+          const imgData = canvas.toDataURL("image/png");
+          doc.addImage(imgData, "PNG", 0, 0, 210, 297);
+          resolve();
+        };
+        img.src = url;
+      });
+    }
+
+    // Save the PDF
+    const startRef = `${sheet.level}-${currentYear}${String(sheet.startNumber).padStart(4, '0')}`;
+    const endRef = `${sheet.level}-${currentYear}${String(sheet.endNumber).padStart(4, '0')}`;
+    doc.save(`sheet-${startRef}-${endRef}-${sheet.packSize}tickets-${totalPages}pages.pdf`);
+
+    // Update download count
+    const newCount = downloadCount + 1;
+    setDownloadCount(newCount);
+    try {
+      fetch('/api/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheet: { id: sheet.id, downloads: newCount } }),
+      }).catch(() => {});
+    } catch {}
   };
 
   const handleSoftDelete = () => {
@@ -1406,43 +1643,77 @@ export default function SheetsPage() {
     const userLogoSrc = localStorage.getItem("ticketLogo") || "/logo.svg";
     const watermarkHref = await getPublicLogoDataUri();
 
-    // Create a single PDF with multiple pages
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
-    let isFirstPage = true;
+    // Sort sheets by start number to maintain order
+    const sortedSheets = selectedSheets
+      .map(id => sheets.find(s => s.id === id))
+      .filter(Boolean)
+      .sort((a, b) => a!.startNumber - b!.startNumber) as Sheet[];
 
-    for (const id of selectedSheets) {
-      const sheet = sheets.find(s => s.id === id);
-      if (!sheet) continue;
+    // Collect all tickets from all sheets in order
+    const allTickets: { level: string; year: string; serial: number; sheetId: string }[] = [];
+    for (const sheet of sortedSheets) {
+      const currentYear = new Date(sheet.generationDate).getFullYear().toString().slice(-2);
+      for (let i = 0; i < sheet.packSize; i++) {
+        const serial = ((sheet.startNumber - 1 + i) % 9999) + 1;
+        allTickets.push({
+          level: sheet.level,
+          year: currentYear,
+          serial,
+          sheetId: sheet.id
+        });
+      }
+    }
 
-      const svgContent = generateSheetSvg(sheet, userLogoSrc, watermarkHref);
+    // Create PDF with A4 portrait pages, 20 tickets per page (4 wide × 5 high)
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const TICKETS_PER_PAGE = 20;
+    const totalPages = Math.ceil(allTickets.length / TICKETS_PER_PAGE);
+
+    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+      const startTicketIndex = pageIndex * TICKETS_PER_PAGE;
+      const endTicketIndex = Math.min(startTicketIndex + TICKETS_PER_PAGE, allTickets.length);
+      const ticketsOnPage = allTickets.slice(startTicketIndex, endTicketIndex);
+
+      // Generate a virtual sheet for this page
+      const virtualSheet = {
+        ...sortedSheets[0],
+        packSize: ticketsOnPage.length as PackSize,
+        tickets: ticketsOnPage
+      };
+
+      // Generate SVG for this virtual page
+      const svgContent = generateBulkSheetSvg(ticketsOnPage, userLogoSrc, watermarkHref);
+
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       const scale = 12;
-      const canvasWidth = 420 * scale;
+      const canvasWidth = 210 * scale;
       const canvasHeight = 297 * scale;
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
+
       const img = new Image();
       const svgBlob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(svgBlob);
 
       await new Promise<void>((resolve) => {
         img.onload = () => {
-          if (!isFirstPage) {
+          if (pageIndex > 0) {
             doc.addPage();
           }
-          isFirstPage = false;
 
           ctx?.drawImage(img, 0, 0, canvasWidth, canvasHeight);
           URL.revokeObjectURL(url);
           const imgData = canvas.toDataURL("image/png");
-          doc.addImage(imgData, "PNG", 0, 0, 420, 297);
+          doc.addImage(imgData, "PNG", 0, 0, 210, 297);
           resolve();
         };
         img.src = url;
       });
+    }
 
-      // Persist download count increment
+    // Update download counts for all sheets
+    for (const sheet of sortedSheets) {
       const current = sheet.downloads || 0;
       const next = current + 1;
       try {
@@ -1452,21 +1723,18 @@ export default function SheetsPage() {
           body: JSON.stringify({ sheet: { id: sheet.id, downloads: next } }),
         }).catch(() => {});
       } catch {}
-
-      // reflect locally
       setSheets(prev => prev.map(s => s.id === sheet.id ? { ...s, downloads: next } : s));
     }
 
     // Save the multi-page PDF
-    const sortedSheets = selectedSheets.map(id => sheets.find(s => s.id === id)).filter(Boolean).sort((a, b) => a!.startNumber - b!.startNumber);
-    const firstSheet = sortedSheets[0]!;
-    const lastSheet = sortedSheets[sortedSheets.length - 1]!;
+    const firstSheet = sortedSheets[0];
+    const lastSheet = sortedSheets[sortedSheets.length - 1];
     const firstYear = new Date(firstSheet.generationDate).getFullYear().toString().slice(-2);
     const lastYear = new Date(lastSheet.generationDate).getFullYear().toString().slice(-2);
     const firstRef = `${firstSheet.level}-${firstYear}${String(firstSheet.startNumber).padStart(4, '0')}`;
     const lastRef = `${lastSheet.level}-${lastYear}${String(lastSheet.endNumber).padStart(4, '0')}`;
-    const packSizes = [...new Set(sortedSheets.map(sheet => sheet!.packSize))].sort((a, b) => a - b).join('-');
-    doc.save(`sheets-${firstRef}-${lastRef}-${packSizes}tickets-${selectedSheets.length}pages.pdf`);
+    const totalTickets = allTickets.length;
+    doc.save(`sheets-${firstRef}-${lastRef}-${totalTickets}tickets-${totalPages}pages.pdf`);
   };
 
   const handleDownloadSelectedSVG = async () => {

@@ -7,7 +7,7 @@
   "lastName": "hmaddi",
   "username": "admin",
   "email": "admin@connectschool.ma",
-  "password": "$2b$12$igqlEGOvg5zznDAO3e/oXOw3rM08dfBJww6o4XTxfOBNv7fv3X.p6",
+  "password": "$2b$10$JAfyTIVEreO5ijB7HqsA3OvmHH0HY.l7tDkCeVMkU.TLD4Ikp//Fq",
   "role": "admin",
   "address": "Hay el maghreb el arabi",
   "number": "0607154474",

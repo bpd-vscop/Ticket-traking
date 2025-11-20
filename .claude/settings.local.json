@@ -9,7 +9,10 @@
       "Bash(taskkill:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(npm run db:seed:all:*)",
+      "Bash(dir:*)",
+      "Bash(if exist .env type .env)"
     ],
     "deny": [],
     "ask": []

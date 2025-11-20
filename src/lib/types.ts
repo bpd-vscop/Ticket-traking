@@ -46,8 +46,8 @@ export const subLevels: Record<Level, string[]> = {
   E: ["Prépa", "Ingénieur", "Médecine", "Autres"], // Spéciale
 };
 
-export type PackSize = 24 | 36 | 38;
-export const packSizes: PackSize[] = [24, 36, 38];
+export type PackSize = 12 | 24 | 36;
+export const packSizes: PackSize[] = [12, 24, 36];
 
 export type PaymentMethod = "cash" | "cheque" | "card";
 
