@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 type SheetInput = {
   id: string;
   level: 'P' | 'C' | 'L' | 'S' | 'E';
-  packSize: 24 | 36 | 38;
+  packSize: 12 | 24 | 36;
   startNumber: number;
   endNumber: number;
   isAssigned: boolean;

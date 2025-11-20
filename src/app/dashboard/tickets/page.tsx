@@ -289,11 +289,11 @@ export default function TicketsPage() {
         // ignore network errors; localStorage fallback remains
       });
 
-    // Sync counters from "inventory"
+    // Sync counters from "inventory" - track per level only
     const sheets = getSheets();
     const latestCounters: CounterMap = {};
     sheets.forEach((sheet) => {
-      const key = `${sheet.level}-${sheet.packSize}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
+      const key = `${sheet.level}-${new Date(sheet.generationDate).getFullYear().toString().slice(-2)}`;
       const endNumber = sheet.endNumber;
       if (!latestCounters[key] || endNumber > latestCounters[key]) {
         latestCounters[key] = endNumber;
@@ -309,7 +309,7 @@ export default function TicketsPage() {
         const dbCounters: CounterMap = { ...latestCounters };
         (data?.sheets || []).forEach((s: any) => {
           const dt = new Date(s.generationDate);
-          const key = `${s.level}-${s.packSize}-${dt.getFullYear().toString().slice(-2)}`;
+          const key = `${s.level}-${dt.getFullYear().toString().slice(-2)}`;
           const endNumber = Number(s.endNumber) || 0;
           if (!dbCounters[key] || endNumber > dbCounters[key]) {
             dbCounters[key] = endNumber;
@@ -335,16 +335,16 @@ export default function TicketsPage() {
 
   const handleGenerate = () => {
     const yy = new Date().getFullYear().toString().slice(-2);
-    const key = `${level}-${packSize}-${yy}`;
+    const key = `${level}-${yy}`; // Track per level only, not per pack size
     const lastUsed = counters[key] ?? 0; // 0 => next is 1
 
-    // Prevent wrap within the same year for this specific level+packSize combination
+    // Prevent wrap within the same year for this level
     const totalTickets = generations * packSize;
     const projectedEnd = lastUsed + totalTickets;
     if (projectedEnd > 9999) {
       toast({
         title: 'Generation exceeds yearly limit',
-        description: `Not enough remaining serials for ${level}-${packSize}-${yy}. Reduce quantity or wait for year change.`,
+        description: `Not enough remaining serials for ${level}-${yy}. Reduce quantity or wait for year change.`,
         variant: 'destructive',
       });
       return;
@@ -385,7 +385,7 @@ export default function TicketsPage() {
 
     toast({
       title: "Sheets Generated",
-      description: `${generations} sheet(s) for ${level}-${packSize}-${yy} (${packSize} tickets each) have been added to the inventory.`,
+      description: `${generations} sheet(s) for ${level} (${packSize} tickets each) generated. Serial numbers: ${lastUsed + 1} to ${newLast}.`,
     });
   };
 
