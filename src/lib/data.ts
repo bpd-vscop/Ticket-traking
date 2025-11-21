@@ -1,17 +1,30 @@
 import type { Sheet, Family, Teacher, User, Level, StudentInfo } from './types';
 
 let mockTeachers: Teacher[] = [
-  { id: 'teacher-1', name: 'Dr. Evelyn Reed' },
-  { id: 'teacher-2', name: 'Mr. Samuel Carter' },
-  { id: 'teacher-3', name: 'Ms. Olivia Chen' },
+  {
+    id: 'teacher-1', name: 'Dr. Evelyn Reed',
+    firstName: '',
+    lastName: '',
+    specializations: []
+  },
+  {
+    id: 'teacher-2', name: 'Mr. Samuel Carter',
+    firstName: '',
+    lastName: '',
+    specializations: []
+  },
+  {
+    id: 'teacher-3', name: 'Ms. Olivia Chen',
+    firstName: '',
+    lastName: '',
+    specializations: []
+  },
 ];
 
 let mockSheets: Sheet[] = [
   { id: 'sheet-1', level: 'P', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: true, downloads: 2, generationDate: new Date('2024-07-20T10:00:00Z'), familyId: 'family-1' },
   { id: 'sheet-2', level: 'P', packSize: 36, startNumber: 25, endNumber: 60, isAssigned: true, downloads: 0, generationDate: new Date('2024-07-21T11:00:00Z'), familyId: 'family-1' },
   { id: 'sheet-3', level: 'C', packSize: 24, startNumber: 1, endNumber: 24, isAssigned: true, downloads: 1, generationDate: new Date('2024-07-22T09:30:00Z'), familyId: 'family-2' },
-  { id: 'sheet-4', level: 'L', packSize: 36, startNumber: 1, endNumber: 36, isAssigned: false, downloads: 0, generationDate: new Date() },
-  { id: 'sheet-5', level: 'S', packSize: 36, startNumber: 1, endNumber: 36, isAssigned: false, downloads: 0, generationDate: new Date() },
 ];
 
 let mockFamilies: Family[] = [
@@ -63,7 +76,7 @@ let mockFamilies: Family[] = [
   },
   {
     id: 'family-3',
-    sheetIds: ['sheet-5'],
+    sheetIds: [],
     level: 'P',
     parents: {
       father: { firstName: 'Ahmed', lastName: 'Benali' },

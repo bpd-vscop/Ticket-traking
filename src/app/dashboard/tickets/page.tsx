@@ -78,7 +78,7 @@ function Barcode({ value }: { value: string }) {
   const wide = 3;
   const quiet = 10;
 
-  // Build sequence of unit widths (bars/spaces alternate starting with BAR).
+  // Build sequence of unit widths (bars/spaces alternate with BAR).
   // We prepend a quiet-zone SPACE by starting draw with drawBar=false.
   const seq: number[] = [quiet];
   let total = quiet;
